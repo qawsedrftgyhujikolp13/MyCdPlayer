@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0f">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<title>CD Album</title>
+</head>
+<body>
+<div class="bg"></div>
+<header class="topbar glass">
+  <div><b>CD Album</b><span id="albumCount">0 albums</span></div>
+  <button class="icon" id="settingsBtn">⋯</button>
+</header>
+
+<main>
+<section id="library" class="screen active">
+  <div class="hero">
+    <div><p class="eyebrow">YOUR MUSIC</p><h1>앨범</h1><p class="sub">MP3를 넣고 나만의 CD를 만들어보세요.</p></div>
+    <button class="primary" id="newAlbum">＋ 앨범 만들기</button>
+  </div>
+  <div id="albumGrid" class="album-grid"></div>
+</section>
+
+<section id="player" class="screen">
+  <button class="back glass" id="backBtn">‹ 앨범</button>
+  <div class="player-wrap">
+    <p class="eyebrow" id="playerAlbumName">ALBUM</p>
+    <div class="cd" id="cd"><div class="cd-label"><img id="cdImg"><div class="hole"></div></div></div>
+    <div class="now"><b id="songTitle">노래를 선택하세요</b><span id="songMeta"></span></div>
+    <div class="timeline">
+      <input id="seek" type="range" min="0" max="100" value="0">
+      <div><span id="currentTime">0:00</span><span id="totalTime">0:00</span></div>
+    </div>
+    <div class="controls">
+      <button id="prev">↶</button><button id="play" class="play">▶</button><button id="next">↷</button>
+    </div>
+    <div class="modes">
+      <button id="shuffle">🔀</button><button id="repeat">↻</button>
+    </div>
+    <div class="track-list" id="trackList"></div>
+  </div>
+</section>
+
+<section id="tools" class="screen">
+  <div class="hero"><div><p class="eyebrow">TOOLS</p><h1>도구</h1></div></div>
+  <div class="tool-card glass">
+    <h2>곡 자르기</h2><p>곡을 선택하고 원하는 구간만 재생하도록 설정합니다.</p>
+    <select id="trimTrack"></select>
+    <div class="trim-times"><b id="trimStartText">0:00</b><b id="trimEndText">0:00</b></div>
+    <div class="trim"><input id="trimStart" type="range" min="0" max="100" value="0"><input id="trimEnd" type="range" min="0" max="100" value="100"></div>
+    <button class="primary wide" id="saveTrim">구간 저장</button>
+  </div>
+  <div class="tool-card glass">
+    <h2>동영상 / 링크 변환</h2>
+    <p>기기 안의 동영상 파일은 오디오로 추출할 수 있습니다. 웹앱만으로 YouTube 다운로드는 브라우저 보안/CORS 때문에 지원하지 않습니다.</p>
+    <input id="videoFile" type="file" accept="video/*" hidden>
+    <button class="secondary wide" id="pickVideo">동영상 선택</button>
+    <p class="tiny" id="convertStatus"></p>
+  </div>
+</section>
+
+<nav class="tabbar glass">
+  <button class="tab active" data-screen="library">⌂<span>앨범</span></button>
+  <button class="tab" data-screen="tools">⌁<span>도구</span></button>
+</nav>
+</main>
+
+<div class="modal" id="albumModal">
+  <div class="sheet glass">
+    <button class="close" data-close>×</button><h2>새 앨범</h2>
+    <input id="albumName" placeholder="앨범 이름">
+    <input id="coverFile" type="file" accept="image/*" hidden>
+    <button class="cover-pick" id="pickCover"><span id="coverPreview">＋</span><small>앨범 커버 선택</small></button>
+    <input id="audioFiles" type="file" accept="audio/mpeg,audio/*" multiple hidden>
+    <button class="secondary wide" id="pickAudio">MP3 여러 곡 선택</button>
+    <div id="selectedFiles" class="selected-files"></div>
+    <button class="primary wide" id="createAlbum">앨범 만들기</button>
+  </div>
+</div>
+
+<audio id="audio"></audio>
+<script src="app.js"></script>
+</body>
+</html>
