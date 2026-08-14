@@ -1,4 +1,4 @@
-const CACHE="mcp-final-lyrics-06";
+const CACHE="mcp-final-current-lyric-07";
 const CORE=["./","./index.html","./style.css","./app.js","./manifest.json"];
 
 self.addEventListener("install",event=>{

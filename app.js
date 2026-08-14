@@ -410,6 +410,7 @@ $("#playerClose").onclick=()=>{
   if(!audio.paused)setPlaying(true);
 };
 $("#miniMain").onclick=()=>{
+  $("#mini").hidden=true;
   $("#player").hidden=false;
   document.body.style.overflow="hidden";
   if(!audio.paused)setPlaying(true);
