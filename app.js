@@ -159,6 +159,38 @@ function lyricsEditor(t){
   };
   openEditor();
 }
+function activeTrack(){return queue[qi]||null}
+function updateFavoriteUI(){
+  const on=!!activeTrack()?.favorite;
+  $("#pFav")?.classList.toggle("active",on);
+  $("#miniFav")?.classList.toggle("active",on);
+}
+function toggleFavorite(){
+  const t=activeTrack();
+  if(!t||!current){toast("재생 중인 노래가 없어요.");return}
+  t.favorite=!t.favorite;
+  save();
+  updateFavoriteUI();
+  if(viewFilter==="fav")render();
+  toast(t.favorite?"찜한 노래에 추가했어요.":"찜한 노래에서 뺐어요.");
+}
+function trackOrAlbumActions(a){
+  modal(`<div class="modal-head"><h2>${esc(a.name)}</h2><button class="icon" id="mx">×</button></div>
+    <div class="actions">
+      <button class="glass-btn" id="op">앨범 열기</button>
+      <button class="glass-btn" id="ed">수정</button>
+      <button class="glass-btn" id="del">삭제</button>
+    </div>`);
+  $("#mx").onclick=closeModal;
+  $("#op").onclick=()=>albumDetail(a);
+  $("#ed").onclick=()=>albumForm(a);
+  $("#del").onclick=async()=>{
+    if(!confirm("앨범을 삭제할까요?"))return;
+    for(const t of a.tracks)await delFile(t.fileKey);
+    albums=albums.filter(x=>x.id!==a.id);
+    save();render();closeModal();toast("앨범을 삭제했어요.");
+  };
+}
 async function start(a,inds,at=0){
   current=a;
   queue=inds.map(i=>a.tracks[i]).filter(Boolean);
