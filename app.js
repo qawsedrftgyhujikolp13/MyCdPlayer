@@ -45,21 +45,110 @@ $("#mx").onclick=closeModal;$("#mc").onclick=closeModal;$("#photo").onclick=()=>
     toast("앨범을 저장하지 못했어요. 저장 공간을 확인해 주세요.");
   }
 }}
-function albumDetail(a){current=a;modal(`<div class="modal-head"><h2>${esc(a.name)}</h2><button class="icon" id="mx">×</button></div>${a.cover?`<img class="detail-cover" src="${a.cover}">`:""}<div class="detail-center"><h2>${esc(a.name)}</h2><p>${esc(a.artist||"")} · ${esc(a.date||"")}</p></div><div>${a.tracks.length?a.tracks.map((t,i)=>`<div class="track"><div class="track-no">${i+1}</div><div><div class="track-name">${esc(t.name)}</div><div class="track-time">${fmt(t.duration)}${t.lyrics?.length?" · 가사":""}</div></div><button class="more" data-track="${i}">•••</button></div>`).join(""):`<p class="meta" style="text-align:center">아직 노래가 없어요.</p>`}</div><div class="actions"><button class="glass-btn" id="editA">수정</button><button class="pink" id="addT">＋ 노래 추가</button></div>`);
-$("#mx").onclick=closeModal;$("#editA").onclick=()=>albumForm(a);$("#addT").onclick=()=>trackForm(a);$$("[data-track]").forEach(b=>b.onclick=()=>trackActions(a,+b.dataset.track))}
+function albumDetail(a){
+  current=a;
+  modal(`<div class="modal-head album-detail-head">
+    <div><h2>${esc(a.name)}</h2><p class="meta">${esc(a.artist||"")} ${a.date?`· ${esc(a.date)}`:""}</p></div>
+    <div class="head-actions"><button class="icon" id="editA" aria-label="앨범 수정">✎</button><button class="icon" id="mx" aria-label="닫기">×</button></div>
+  </div>
+  ${a.cover?`<div class="detail-cover-wrap"><img class="detail-cover" src="${a.cover}" alt=""></div>`:""}
+  <div class="detail-center"><div class="detail-count">${a.tracks.length}곡</div></div>
+  <div class="track-list">${a.tracks.length?a.tracks.map((t,i)=>`<div class="track" data-track-row="${i}">
+    <div class="track-leading"><span class="track-dot"></span></div>
+    <div class="track-main"><div class="track-name">${esc(t.name)}</div><div class="track-time">${fmt(t.duration)}${t.lyrics?.length?" · 가사":""}</div></div>
+    <button class="more" data-track="${i}" aria-label="곡 메뉴">•••</button>
+  </div>`).join(""):`<p class="meta empty-tracks">아직 노래가 없어요.</p>`}</div>
+  <div class="album-detail-actions">
+    <button class="glass-btn add-track-small" id="addT"><span>＋</span> 노래 추가</button>
+    <button class="pink play-album-large" id="playAll"><span class="play-shape"></span><span>재생</span></button>
+  </div>`);
+  $("#mx").onclick=closeModal;
+  $("#editA").onclick=()=>albumForm(a);
+  $("#addT").onclick=()=>trackForm(a);
+  $("#playAll").onclick=()=>{if(!a.tracks.length)return toast("먼저 노래를 추가해 주세요.");start(a,a.tracks.map((_,i)=>i),0)};
+  $$("[data-track]").forEach(b=>b.onclick=()=>trackActions(a,+b.dataset.track));
+  $$("[data-track-row]").forEach(row=>row.onclick=e=>{
+    if(e.target.closest("[data-track]"))return;
+    const i=+row.dataset.trackRow;
+    if(a.tracks[i])start(a,[i],0);
+  });
+}
 function trackForm(a){let file=null,dur=0;modal(`<div class="modal-head"><h2>노래 추가</h2><button class="icon" id="mx">×</button></div><div class="field"><label>노래 제목 *</label><input id="tn" placeholder="노래 제목을 입력하세요"></div><div class="field"><label>음원</label><button class="glass-btn" id="pickSong">MP3 / 음원 불러오기</button><span id="fn" class="meta"></span></div><div class="field"><label>길이(초)</label><input id="td" type="number" min="0" step="1" placeholder="자동 인식"></div><div class="actions"><button class="glass-btn" id="mc">취소</button><button class="pink" id="saveT">SAVE</button></div>`);
 $("#mx").onclick=closeModal;$("#mc").onclick=closeModal;$("#pickSong").onclick=()=>$("#songInput").click();$("#songInput").onchange=()=>{file=$("#songInput").files[0];if(!file)return;$("#fn").textContent=" · "+file.name;let u=URL.createObjectURL(file),x=new Audio;x.onloadedmetadata=()=>{$("#td").value=Math.round(x.duration);dur=x.duration;URL.revokeObjectURL(u)};x.src=u};$("#saveT").onclick=async()=>{let name=$("#tn").value.trim();if(!name)return toast("노래 제목을 입력해 주세요.");let d=+$("#td").value||dur||0,key=file?uid():"";if(file)await putFile(key,file);a.tracks.push({id:uid(),name,duration:d,fileKey:key,lyrics:[]});save();albumDetail(a);toast("노래를 추가했어요.")}}
 function trackActions(a,i){let t=a.tracks[i];modal(`<div class="modal-head"><h2>${esc(t.name)}</h2><button class="icon" id="mx">×</button></div><p class="meta">${fmt(t.duration)} · ${esc(a.artist||"")}</p><div class="actions"><button class="glass-btn" id="lyricsEdit">가사 편집</button><button class="glass-btn" id="delT">삭제</button><button class="pink" id="playT">재생</button></div>`);$("#mx").onclick=closeModal;$("#playT").onclick=()=>start(a,[i]);$("#delT").onclick=async()=>{await delFile(t.fileKey);a.tracks.splice(i,1);save();albumDetail(a);toast("노래를 삭제했어요.")};$("#lyricsEdit").onclick=()=>lyricsEditor(t)}
 function lyricsEditor(t){let rows=(t.lyrics||[]).map(x=>({...x}));if(!rows.length)rows=[{start:0,end:5,text:""}];const rowsHTML=()=>rows.map((r,i)=>`<div class="lyric-row" data-i="${i}"><input class="ls" type="number" min="0" step=".1" value="${r.start}" placeholder="시작"><input class="le" type="number" min="0" step=".1" value="${r.end}" placeholder="끝"><input class="lt" value="${r.text===" "?"":esc(r.text)}" placeholder="가사 / 공백=♪"><button data-rm="${i}">×</button></div>`).join("");modal(`<div class="modal-head"><h2>가사 편집</h2><button class="icon" id="mx">×</button></div><div class="help"><b>예시</b> 12초 → 16초 → 안녕 오늘도<br>가사 칸을 비워 저장하면 그 구간은 <b>♪ 간주</b>가 됩니다.</div><div class="lyric-editor" id="le">${rowsHTML()}</div><div class="actions"><button class="glass-btn" id="addL">＋ 구간</button><button class="pink" id="saveL">SAVE</button></div>`);$("#mx").onclick=closeModal;$("#addL").onclick=()=>{rows.push({start:0,end:5,text:""});lyricsEditor(t)};$$("[data-rm]").forEach(b=>b.onclick=()=>{rows.splice(+b.dataset.rm,1);lyricsEditor(t)});$("#saveL").onclick=()=>{$$("[data-i]").forEach(row=>{let i=+row.dataset.i;rows[i]={start:+$(".ls",row).value||0,end:+$(".le",row).value||0,text:$(".lt",row).value.trim()||" "}});t.lyrics=rows.filter(x=>x.end>=x.start).sort((a,b)=>a.start-b.start);save();closeModal();renderLyrics(t);toast("가사를 저장했어요.")}}
-async function start(a,inds,at=0){current=a;queue=inds.map(i=>a.tracks[i]).filter(Boolean);qi=at;closeModal();$("#player").hidden=false;$("#mini").hidden=true;document.body.style.overflow="hidden";await loadTrack()}
-async function loadTrack(){let t=queue[qi];if(!t)return;$("#pTitle").textContent=t.name;$("#pArtist").textContent=current.artist||"아티스트";$("#pAlbum").textContent=current.name;$("#pCounter").textContent=`${qi+1} / ${queue.length}`;$("#frontCover").innerHTML=current.cover?`<img src="${current.cover}">`:"";renderLyrics(t);renderQueue();let f=await getFile(t.fileKey);if(f){if(audio.src)URL.revokeObjectURL(audio.src);audio.src=URL.createObjectURL(f);audio.play().then(()=>setPlaying(true)).catch(()=>setPlaying(false))}else{audio.removeAttribute("src");setPlaying(false)}media(t)}
-function setPlaying(on){$("#pToggle").classList.toggle("is-playing",on);$("#backDisc").classList.toggle("playing",on);$("#frontCover").classList.toggle("playing",on);$("#mini").classList.toggle("playing",on);$("#miniPlay").textContent=on?"Ⅱ":"▶";$("#mini").hidden=!on;if(on)showMini()}
-function next(){if(!queue.length)return;if(shuffle)qi=Math.floor(Math.random()*queue.length);else if(qi<queue.length-1)qi++;else if(repeat)qi=0;else{setPlaying(false);return}loadTrack()}
-function prev(){if(audio.currentTime>4){audio.currentTime=0;return}qi=(qi-1+queue.length)%queue.length;loadTrack()}
+async function start(a,inds,at=0){
+  current=a;
+  queue=inds.map(i=>a.tracks[i]).filter(Boolean);
+  qi=Math.max(0,Math.min(at,queue.length-1));
+  closeModal();
+  $("#player").hidden=false;
+  $("#mini").hidden=true;
+  document.body.style.overflow="hidden";
+  if(!queue.length)return;
+  await loadTrack(true);
+}
+async function loadTrack(autoplay=false){
+  const t=queue[qi];
+  if(!t)return;
+  $("#pTitle").textContent=t.name;
+  $("#pArtist").textContent=current?.artist||"아티스트";
+  $("#frontCover").innerHTML=current?.cover?`<img src="${current.cover}" alt="">`:"";
+  renderLyrics(t);
+  renderQueue();
+  media(t);
+  const f=await getFile(t.fileKey);
+  if(!f){
+    audio.removeAttribute("src");
+    setPlaying(false);
+    toast("이 곡의 음원 파일을 찾을 수 없어요. 다시 추가해 주세요.");
+    return;
+  }
+  if(audio.src)URL.revokeObjectURL(audio.src);
+  const url=URL.createObjectURL(f);
+  audio.src=url;
+  audio.load();
+  if(autoplay){
+    try{
+      await audio.play();
+      setPlaying(true);
+    }catch(err){
+      setPlaying(false);
+      toast("재생 준비가 완료됐어요. 재생 버튼을 눌러 주세요.");
+    }
+  }else{
+    setPlaying(false);
+  }
+}
+function setPlaying(on){
+  $("#pToggle").classList.toggle("is-playing",on);
+  $("#backDisc").classList.toggle("playing",on);
+  $("#frontCover").classList.toggle("playing",on);
+  $("#mini").classList.toggle("playing",on);
+  $("#miniPlay").classList.toggle("is-playing",on);
+  $("#mini").hidden=!on;
+  if(on)showMini();
+}
+function next(){
+  if(!queue.length)return;
+  if(shuffle){
+    if(queue.length===1)qi=0;
+    else{let n;do n=Math.floor(Math.random()*queue.length);while(n===qi);qi=n}
+  }else if(qi<queue.length-1)qi++;
+  else if(repeat)qi=0;
+  else{audio.pause();setPlaying(false);return}
+  loadTrack(true);
+}
+function prev(){
+  if(!queue.length)return;
+  if(audio.currentTime>3){audio.currentTime=0;return}
+  qi=(qi-1+queue.length)%queue.length;
+  loadTrack(true);
+}
 function showMini(){$("#mini").hidden=false;$("#miniTitle").textContent=queue[qi]?.name||"—";$("#miniArtist").textContent=current?.artist||"—"}
 function media(t){if(!("mediaSession"in navigator))return;navigator.mediaSession.metadata=new MediaMetadata({title:t.name,artist:current.artist||"MCP",album:current.name,artwork:current.cover?[{src:current.cover,sizes:"512x512",type:"image/png"}]:[]});for(const [n,fn] of Object.entries({play:()=>audio.play(),pause:()=>audio.pause(),nexttrack:next,previoustrack:prev,seekbackward:()=>audio.currentTime=Math.max(0,audio.currentTime-10),seekforward:()=>audio.currentTime=Math.min(audio.duration||0,audio.currentTime+10)})){try{navigator.mediaSession.setActionHandler(n,fn)}catch{}}}
 function renderLyrics(t){let box=$("#lyricsLines"),ls=t?.lyrics||[];if(!ls.length){box.innerHTML='<p class="meta" style="text-align:center;padding:20px">등록된 가사가 없어요.</p>';return}box.innerHTML=ls.map((l,i)=>`<div class="lyric ${l.text===" "?"interlude":""}" data-lyric="${i}">${l.text===" "?"♪":esc(l.text)}</div>`).join("")}
-function renderQueue(){$("#queueList").innerHTML=queue.map((t,i)=>`<div class="queue-item ${i===qi?"active":""}" data-q="${i}"><b>${i+1}</b><span>${esc(t.name)}<small class="meta"> · ${fmt(t.duration)}</small></span><span>${i===qi?"●":""}</span></div>`).join("")}
+function renderQueue(){$("#queueList").innerHTML=queue.map((t,i)=>`<div class="queue-item ${i===qi?"active":""}" data-q="${i}"><span class="queue-dot">${i===qi?"●":""}</span><span>${esc(t.name)}<small class="meta"> · ${fmt(t.duration)}</small></span><span class="queue-now">${i===qi?"NOW":""}</span></div>`).join("")}
 function queueOpen(){renderQueue();$("#queue").hidden=false}
 
 async function trimToolModal(){
@@ -151,10 +240,14 @@ $("#saveAlbumNow").onclick=async()=>{
 };
 await ac.close()}
 $("#heroAdd").onclick=()=>albumForm();$("#emptyAdd").onclick=()=>albumForm();$("#fab").onclick=()=>albumForm();$("#homeBtn").onclick=()=>{closeModal();$("#player").hidden=true;document.body.style.overflow=""};$("#albumGrid").onclick=e=>{let m=e.target.closest("[data-more]");if(m){let a=albums.find(x=>x.id===m.dataset.more);modal(`<div class="modal-head"><h2>${esc(a.name)}</h2><button class="icon" id="mx">×</button></div><div class="actions"><button class="glass-btn" id="op">앨범 열기</button><button class="glass-btn" id="ed">수정</button><button class="glass-btn" id="del">삭제</button></div>`);$("#mx").onclick=closeModal;$("#op").onclick=()=>albumDetail(a);$("#ed").onclick=()=>albumForm(a);$("#del").onclick=async()=>{if(!confirm("앨범을 삭제할까요?"))return;for(let t of a.tracks)await delFile(t.fileKey);albums=albums.filter(x=>x.id!==a.id);save();render();closeModal();toast("앨범을 삭제했어요.")}}else{let c=e.target.closest("[data-id]");if(c)albumDetail(albums.find(x=>x.id===c.dataset.id))}};
-$("#playerClose").onclick=()=>{$("#player").hidden=true;audio.pause();setPlaying(false);document.body.style.overflow=""};$("#miniMain").onclick=()=>$("#player").hidden=false;$("#miniPrev").onclick=prev;$("#miniNext").onclick=next;$("#miniPlay").onclick=()=>$("#pToggle").click();$("#pToggle").onclick=()=>{if(audio.paused){audio.play();setPlaying(true)}else{audio.pause();setPlaying(false)}};$("#pNext").onclick=()=>{if(!queue.length)return;const b=$("#pNext");b.classList.remove("arrow-shift");void b.offsetWidth;b.classList.add("arrow-shift");setTimeout(next,120)};$("#pPrev").onclick=prev;$("#pShuffle").onclick=()=>{shuffle=!shuffle;$("#pShuffle").style.color=shuffle?"var(--pink)":"#fff"};$("#pRepeat").onclick=()=>{repeat=!repeat;$("#pRepeat").style.color=repeat?"var(--pink)":"#fff"};$("#seek").oninput=()=>{if(audio.duration)audio.currentTime=audio.duration*$("#seek").value/100};audio.ontimeupdate=()=>{if(!audio.duration)return;let t=queue[qi],ls=t?.lyrics||[];$("#seek").value=audio.currentTime/audio.duration*100;$("#pCur").textContent=fmt(audio.currentTime);$("#pRemain").textContent="-"+fmt(audio.duration-audio.currentTime);$("#miniRemain").textContent=fmt(audio.duration-audio.currentTime);$$("[data-lyric]").forEach((el,i)=>el.classList.toggle("active",audio.currentTime>=ls[i].start&&audio.currentTime<ls[i].end));let active=$(".lyric.active");if(active)active.scrollIntoView({behavior:"smooth",block:"center"})};audio.onplay=()=>setPlaying(true);audio.onpause=()=>setPlaying(false);audio.onended=next;
-$("#queueBtn").onclick=queueOpen;$("#closeQueue").onclick=()=>$("#queue").hidden=true;$("#queueList").onclick=e=>{let x=e.target.closest("[data-q]");if(x){qi=+x.dataset.q;$("#queue").hidden=true;loadTrack()}};$("#lyricsBtn").onclick=()=>$("#lyrics").scrollIntoView({behavior:"smooth"});$("#editLyrics").onclick=()=>queue[qi]&&lyricsEditor(queue[qi]);$("#convertBtn").onclick=convertModal;$("#homeMp3Tool").onclick=convertModal;$("#homeTrimTool").onclick=trimToolModal;
+$("#playerClose").onclick=()=>{$("#player").hidden=true;audio.pause();setPlaying(false);document.body.style.overflow=""};$("#miniMain").onclick=()=>$("#player").hidden=false;$("#miniPrev").onclick=prev;$("#miniNext").onclick=next;$("#miniPlay").onclick=()=>$("#pToggle").click();$("#pToggle").onclick=()=>{if(audio.paused){audio.play();setPlaying(true)}else{audio.pause();setPlaying(false)}};$("#pNext").onclick=()=>{if(!queue.length)return;const b=$("#pNext");b.classList.remove("arrow-shift");void b.offsetWidth;b.classList.add("arrow-shift");setTimeout(next,120)};
+$("#pPrev").onclick=prev;
+$("#pShuffle").onclick=()=>{shuffle=!shuffle;$("#pShuffle").classList.toggle("active",shuffle);};
+$("#pRepeat").onclick=()=>{repeat=!repeat;$("#pRepeat").classList.toggle("active",repeat);};$("#seek").oninput=()=>{if(audio.duration)audio.currentTime=audio.duration*$("#seek").value/100};audio.onerror=()=>{if(queue.length)toast("음원을 재생할 수 없어요. 파일을 다시 추가해 주세요.")};
+audio.ontimeupdate=()=>{if(!audio.duration)return;let t=queue[qi],ls=t?.lyrics||[];$("#seek").value=audio.currentTime/audio.duration*100;$("#pCur").textContent=fmt(audio.currentTime);$("#pRemain").textContent="-"+fmt(audio.duration-audio.currentTime);$("#miniRemain").textContent=fmt(audio.duration-audio.currentTime);$$("[data-lyric]").forEach((el,i)=>el.classList.toggle("active",audio.currentTime>=ls[i].start&&audio.currentTime<ls[i].end));let active=$(".lyric.active");if(active)active.scrollIntoView({behavior:"smooth",block:"center"})};audio.onplay=()=>setPlaying(true);audio.onpause=()=>setPlaying(false);audio.onended=next;
+$("#queueBtn").onclick=queueOpen;$("#closeQueue").onclick=()=>$("#queue").hidden=true;$("#queueList").onclick=e=>{let x=e.target.closest("[data-q]");if(x){qi=+x.dataset.q;$("#queue").hidden=true;loadTrack()}};$("#lyricsBtn").onclick=()=>$("#lyrics").scrollIntoView({behavior:"smooth"});$("#editLyrics").onclick=()=>queue[qi]&&lyricsEditor(queue[qi]);$("#homeMp3Tool").onclick=convertModal;$("#homeTrimTool").onclick=trimToolModal;
 $("#searchBtn").onclick=()=>{let q=prompt("앨범 또는 곡 검색");if(q===null)return;let n=albums.filter(a=>a.name.includes(q)||a.artist?.includes(q)||a.tracks.some(t=>t.name.includes(q))).length;toast(n?`${n}개의 앨범에서 찾았어요.`:"검색 결과가 없어요.")};
-load();render();if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js?v=33").catch(()=>{});setTimeout(()=>{$("#splash").style.opacity=0;setTimeout(()=>$("#splash")?.remove(),600)},1450);
+load();render();if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js?v=FINAL_01").catch(()=>{});setTimeout(()=>{$("#splash").style.opacity=0;setTimeout(()=>$("#splash")?.remove(),600)},1450);
 })();
 
 
