@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#fff7fa">
+<meta name="theme-color" content="#fff7fb" id="themeColor">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="MCP">
 <link rel="manifest" href="manifest.json">
@@ -11,67 +11,76 @@
 <title>MCP — My CD Player</title>
 </head>
 <body>
-<div id="splash"><div class="splash-logo"><img src="logo.png" alt="MCP — My CD Player"></div></div>
+<div id="splash"><img src="logo.png" alt="MCP"><div class="splash-glow"></div></div>
+
 <div id="app">
-<header class="topbar glass">
-  <button class="brand" id="homeBtn"><img src="logo.png" alt="MCP"><span><strong>MCP</strong><small>My CD Player</small></span></button>
-  <div class="top-actions">
-    <button class="glass-icon" id="searchBtn">⌕</button>
-    <button class="glass-icon" id="themeBtn">☾</button>
+<header class="nav glass">
+  <button class="brand" id="homeBtn"><img src="logo.png" alt=""><span><b>MCP</b><small>My CD Player</small></span></button>
+  <div class="nav-actions">
+    <button class="icon" id="searchBtn" aria-label="검색">⌕</button>
+    <button class="icon" id="themeBtn" aria-label="테마">◐</button>
   </div>
 </header>
 
-<main id="home">
+<main>
 <section class="hero glass">
-  <div class="hero-copy"><small>MY COLLECTION</small><h1>나의 앨범</h1><p>좋아하는 음악을 CD처럼 모아두고,<br>내 방식대로 재생해보세요.</p></div>
-  <div class="hero-disc"><i>♫</i></div>
+  <div class="hero-copy">
+    <span class="eyebrow">YOUR DIGITAL MUSIC ROOM</span>
+    <h1>음악을<br><em>CD처럼.</em></h1>
+    <p>앨범을 모으고, 원하는 곡만 골라<br>나만의 플레이어로 재생하세요.</p>
+    <div class="hero-actions"><button class="pink" id="heroAdd">＋ 새 앨범</button><button class="glass-btn" id="recentBtn">최근 재생</button></div>
+  </div>
+  <div class="hero-vinyl"><div class="shine"></div><div class="hero-label">MCP</div><div class="hero-hole"></div></div>
 </section>
 
-<section class="section-head">
-  <div><small>LIBRARY</small><h2 id="albumCount">0 ALBUMS</h2></div>
-  <div class="head-actions"><button class="glass-btn" id="sortBtn">가나다순</button><button class="pink-btn" id="newAlbumBtn">＋ 앨범</button></div>
+<section class="library-head">
+  <div><span class="eyebrow">LIBRARY</span><h2 id="albumCount">0 ALBUMS</h2></div>
+  <div class="filters"><button class="glass-btn active" data-filter="albums">앨범</button><button class="glass-btn" data-filter="recent">최근</button><button class="glass-btn" data-filter="fav">♥</button></div>
 </section>
 
 <section id="empty" class="empty glass">
-  <div class="empty-cd">♫</div><h2>앨범이 없네요</h2><p>나만의 첫 번째 CD를 만들어보세요.</p>
-  <button class="pink-btn" id="emptyNew">첫 앨범 만들기</button>
+  <div class="empty-vinyl">♪</div><h2>아직 앨범이 없어요</h2><p>첫 번째 CD를 만들어<br>음악을 담아보세요.</p><button class="pink" id="emptyAdd">앨범 만들기</button>
 </section>
-<section id="grid" class="grid"></section>
+<section id="albumGrid" class="album-grid"></section>
 </main>
-
 <button class="fab" id="fab">＋</button>
+</div>
 
 <div id="modal"></div>
 
+<div id="mini" class="mini glass" hidden>
+  <button id="miniMain" class="mini-main"><span id="miniDisc" class="mini-disc">M</span><span class="mini-copy"><b id="miniTitle">—</b><small id="miniArtist">—</small></span></button>
+  <span id="miniRemain">0:00</span><button id="miniPrev" class="mini-ctrl">‹</button><button id="miniPlay" class="mini-ctrl">Ⅱ</button><button id="miniNext" class="mini-ctrl">›</button>
+</div>
+
 <div id="player" hidden>
-  <div class="player-bg"></div>
-  <section class="player glass">
-    <button class="close glass-icon" id="playerClose">×</button>
-    <div class="player-head"><small>NOW PLAYING</small><span id="playerCounter">1 / 1</span></div>
-    <div class="art-stage">
-      <div class="art-shadow"></div><div class="big-disc" id="bigDisc"><div class="label"><span>MCP</span></div></div>
-      <div class="art-cover" id="playerCover"></div>
+  <div class="player-ambient"></div>
+  <section class="full-player">
+    <button class="player-close icon" id="playerClose">×</button>
+    <div class="player-top"><span>NOW PLAYING</span><b id="pCounter">1 / 1</b></div>
+    <div class="player-art">
+      <div class="back-disc" id="backDisc"></div>
+      <div class="front-cover" id="frontCover"></div>
     </div>
-    <div class="now"><h1 id="nowTitle">노래 제목</h1><p id="nowArtist">가수명</p><div class="album-link" id="nowAlbum">앨범</div></div>
-    <div class="progress"><input id="progress" type="range" min="0" max="100" value="0"><div><span id="elapsed">0:00</span><span id="remaining">-0:00</span></div></div>
-    <div class="controls">
-      <button id="shuffle" class="ctrl">⌘</button><button id="prev" class="ctrl">〈</button><button id="play" class="play">▶</button><button id="next" class="ctrl">〉</button><button id="repeat" class="ctrl">↻</button>
-    </div>
-    <div class="lyrics-box glass">
-      <div class="lyrics-head"><span>LYRICS</span><button id="lyricsEdit" class="glass-btn">가사 편집</button></div>
-      <div id="lyricsView" class="lyrics-view"><div class="lyrics-note">♪</div><p>등록된 가사가 없어요.</p></div>
-    </div>
-    <div class="player-tools"><button id="queueOpen" class="glass-btn">☷ 재생목록</button><button id="sleepBtn" class="glass-btn">◷ 취침 타이머</button></div>
+    <div class="p-meta"><span id="pAlbum">MCP</span><h1 id="pTitle">—</h1><p id="pArtist">—</p></div>
+    <div class="seek"><input id="seek" type="range" min="0" max="100" value="0"><div><span id="pCur">0:00</span><span id="pRemain">-0:00</span></div></div>
+    <div class="transport"><button id="pShuffle" class="round">⌘</button><button id="pPrev" class="round">‹</button><button id="pToggle" class="play">Ⅱ</button><button id="pNext" class="round">›</button><button id="pRepeat" class="round">↻</button></div>
+    <div class="mode-row"><button id="lyricsBtn" class="glass-btn">♪ 가사</button><button id="queueBtn" class="glass-btn">☷ 재생목록</button><button id="convertBtn" class="glass-btn">MP3 변환</button></div>
+    <section class="lyrics glass" id="lyrics">
+      <div class="lyrics-head"><span>LYRICS</span><button id="editLyrics" class="tiny">편집</button></div>
+      <div id="lyricsLines"></div>
+    </section>
   </section>
 </div>
 
-<div id="queuePanel" hidden><div class="queue-back"></div><section class="queue glass"><div class="sheet-handle"></div><div class="sheet-head"><h2>재생목록</h2><button id="queueClose" class="glass-icon">×</button></div><div id="queueList"></div></section></div>
+<div id="queue" hidden><div class="sheet-bg"></div><section class="queue-sheet glass"><div class="handle"></div><div class="sheet-head"><h2>재생목록</h2><button id="closeQueue" class="icon">×</button></div><div id="queueList"></div></section></div>
 
 <input id="coverInput" type="file" accept="image/*" hidden>
-<input id="audioInput" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" hidden>
+<input id="songInput" type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" hidden>
 <input id="videoInput" type="file" accept="video/*" hidden>
 <audio id="audio" preload="metadata"></audio>
-</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
