@@ -15,8 +15,18 @@ async function delFile(k){if(!k)return;let d=await openDB();d.transaction(STORE,
 function render(){let list=albums.slice().reverse();$("#albumCount").textContent=`${list.length} ALBUM${list.length===1?"":"S"}`;$("#empty").style.display=list.length?"none":"flex";$("#albumGrid").innerHTML=list.map((a,i)=>`<article class="album-card" data-id="${a.id}" style="animation-delay:${i*45}ms"><div class="album-cover">${a.cover?`<img src="${a.cover}">`:"♫"}</div><div><h3>${esc(a.name)}</h3><div class="meta">${esc(a.artist||"아티스트 미입력")} · ${esc(a.date||"발매일 미입력")}</div><div class="meta">${a.tracks.length}곡</div></div><button class="more" data-more="${a.id}">•••</button></article>`).join("")}
 function modal(body){$("#mini").hidden=true;document.body.classList.add("modal-open");$("#modal").innerHTML=`<div class="modal-bg"><section class="modal-card">${body}</section></div>`;$(".modal-bg").onclick=e=>{if(e.target===e.currentTarget)closeModal()}}
 function closeModal(){$("#modal").innerHTML="";document.body.classList.remove("modal-open");if(!audio.paused&&queue.length)showMini()}
-function albumForm(a=null){let cover=a?.cover||"";modal(`<div class="modal-head"><h2>${a?"앨범 수정":"새 앨범"}</h2><button class="icon" id="mx">×</button></div><div class="field"><label>앨범명 *</label><input id="an" placeholder="앨범명을 입력하세요" value="${esc(a?.name)}"></div><div class="field"><label>가수명</label><input id="aa" placeholder="가수명을 입력하세요" value="${esc(a?.artist)}"></div><div class="field"><label>발매일</label><input id="ad" type="date" value="${a?.date||""}"></div><div class="field"><label>앨범 표지</label><div class="photo" id="photo">${cover?`<img src="${cover}">`:"📸 사진을 넣어주세요"}</div></div><div class="actions"><button class="glass-btn" id="mc">취소</button><button class="pink" id="saveAlbum">SAVE</button></div>`);
-$("#mx").onclick=closeModal;$("#mc").onclick=closeModal;$("#photo").onclick=()=>$("#coverInput").click();$("#coverInput").onchange=()=>{let f=$("#coverInput").files[0];if(f)window.openSquareCropper(f,$("#coverInput"),(dataUrl)=>{cover=dataUrl;$("#photo").innerHTML=`<img src="${cover}">`})};$("#saveAlbum").onclick=()=>{
+function albumForm(a=null,presetCover=null){let cover=(presetCover ?? a?.cover ?? "");modal(`<div class="modal-head"><h2>${a?"앨범 수정":"새 앨범"}</h2><button class="icon" id="mx">×</button></div><div class="field"><label>앨범명 *</label><input id="an" placeholder="앨범명을 입력하세요" value="${esc(a?.name)}"></div><div class="field"><label>가수명</label><input id="aa" placeholder="가수명을 입력하세요" value="${esc(a?.artist)}"></div><div class="field"><label>발매일</label><input id="ad" type="date" value="${a?.date||""}"></div><div class="field"><label>앨범 표지</label><div class="photo" id="photo">${cover?`<img src="${cover}">`:"📸 사진을 넣어주세요"}</div></div><div class="actions"><button class="glass-btn" id="mc">취소</button><button class="pink" id="saveAlbum">SAVE</button></div>`);
+$("#mx").onclick=closeModal;$("#mc").onclick=closeModal;$("#photo").onclick=()=>$("#coverInput").click();$("#coverInput").onchange=()=>{
+  const f=$("#coverInput").files[0]; if(!f)return;
+  const formData={name:$("#an").value,artist:$("#aa").value,date:$("#ad").value};
+  window.openSquareCropper(f,$("#coverInput"),(dataUrl)=>{
+    albumForm(a,dataUrl);
+    $("#an").value=formData.name;
+    $("#aa").value=formData.artist;
+    $("#ad").value=formData.date;
+    $("#photo").innerHTML=`<img src="${dataUrl}">`;
+  });
+};$("#saveAlbum").onclick=()=>{
   const name=$("#an").value.trim();
   if(!name){toast("앨범명을 입력해 주세요.");$("#an").focus();return}
   const data={name,artist:$("#aa").value.trim(),date:$("#ad").value,cover};
@@ -180,7 +190,7 @@ window.openSquareCropper=function(file,input,onDone){
     img.style.left=((side-w)/2+x)+"px";img.style.top=((side-h)/2+y)+"px";
   }
   img.onload=()=>{scale=1;zoom.value=1;fit()};
-  const close=()=>{URL.revokeObjectURL(url);root.innerHTML=""};
+  const close=()=>{URL.revokeObjectURL(url);root.innerHTML="";document.body.classList.remove("modal-open")};
   root.querySelector("#cropClose").onclick=close;
   root.querySelector("#cropCancel").onclick=close;
   zoom.oninput=()=>{scale=Number(zoom.value);fit()};
@@ -211,9 +221,11 @@ window.openSquareCropper=function(file,input,onDone){
       const dt=new DataTransfer();dt.items.add(cropped);
       input.files=dt.files;
       const reader=new FileReader();
-      reader.onload=()=>onDone(reader.result);
+      reader.onload=()=>{
+        close();
+        onDone(reader.result);
+      };
       reader.readAsDataURL(cropped);
-      close();
       const toast=document.createElement("div");
       toast.className="toast";toast.textContent="1:1 앨범 사진 적용 완료";document.body.append(toast);
       setTimeout(()=>toast.remove(),1800);
