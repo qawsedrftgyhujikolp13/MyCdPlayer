@@ -3,7 +3,11 @@ const DB="mcp30",STORE="files",KEY="mcp30_albums";let albums=[],current=null,que
 const audio=$("#audio");const uid=()=>crypto.randomUUID?.()||Date.now()+"-"+Math.random().toString(36).slice(2);const fmt=n=>{n=Math.max(0,Math.floor(n||0));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};const esc=s=>(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function toast(t){let e=document.createElement("div");e.className="toast";e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),2100)}
 function load(){try{albums=JSON.parse(localStorage.getItem(KEY)||"[]")}catch{albums=[]}albums.forEach(a=>{a.tracks??=[]})}
-function save(){localStorage.setItem(KEY,JSON.stringify(albums))}
+function save(){
+  const serialized=JSON.stringify(albums);
+  localStorage.setItem(KEY,serialized);
+  return true;
+}
 function openDB(){return new Promise((ok,no)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 async function putFile(k,f){let d=await openDB();return new Promise((ok,no)=>{let t=d.transaction(STORE,"readwrite");t.objectStore(STORE).put(f,k);t.oncomplete=ok;t.onerror=()=>no(t.error)})}
 async function getFile(k){if(!k)return null;let d=await openDB();return new Promise((ok,no)=>{let r=d.transaction(STORE).objectStore(STORE).get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
@@ -12,7 +16,25 @@ function render(){let list=albums.slice().reverse();$("#albumCount").textContent
 function modal(body){$("#mini").hidden=true;document.body.classList.add("modal-open");$("#modal").innerHTML=`<div class="modal-bg"><section class="modal-card">${body}</section></div>`;$(".modal-bg").onclick=e=>{if(e.target===e.currentTarget)closeModal()}}
 function closeModal(){$("#modal").innerHTML="";document.body.classList.remove("modal-open");if(!audio.paused&&queue.length)showMini()}
 function albumForm(a=null){let cover=a?.cover||"";modal(`<div class="modal-head"><h2>${a?"앨범 수정":"새 앨범"}</h2><button class="icon" id="mx">×</button></div><div class="field"><label>앨범명 *</label><input id="an" placeholder="앨범명을 입력하세요" value="${esc(a?.name)}"></div><div class="field"><label>가수명</label><input id="aa" placeholder="가수명을 입력하세요" value="${esc(a?.artist)}"></div><div class="field"><label>발매일</label><input id="ad" type="date" value="${a?.date||""}"></div><div class="field"><label>앨범 표지</label><div class="photo" id="photo">${cover?`<img src="${cover}">`:"📸 사진을 넣어주세요"}</div></div><div class="actions"><button class="glass-btn" id="mc">취소</button><button class="pink" id="saveAlbum">SAVE</button></div>`);
-$("#mx").onclick=closeModal;$("#mc").onclick=closeModal;$("#photo").onclick=()=>$("#coverInput").click();$("#coverInput").onchange=()=>{let f=$("#coverInput").files[0];if(f)window.openSquareCropper(f,$("#coverInput"),(dataUrl)=>{cover=dataUrl;$("#photo").innerHTML=`<img src="${cover}">`})};$("#saveAlbum").onclick=()=>{let name=$("#an").value.trim();if(!name)return toast("앨범명을 입력해 주세요.");if(a)Object.assign(a,{name,artist:$("#aa").value.trim(),date:$("#ad").value,cover});else albums.unshift({id:uid(),name,artist:$("#aa").value.trim(),date:$("#ad").value,cover,tracks:[],createdAt:Date.now()});save();render();closeModal();toast(a?"앨범을 수정했어요.":"앨범을 만들었어요.")}}
+$("#mx").onclick=closeModal;$("#mc").onclick=closeModal;$("#photo").onclick=()=>$("#coverInput").click();$("#coverInput").onchange=()=>{let f=$("#coverInput").files[0];if(f)window.openSquareCropper(f,$("#coverInput"),(dataUrl)=>{cover=dataUrl;$("#photo").innerHTML=`<img src="${cover}">`})};$("#saveAlbum").onclick=()=>{
+  const name=$("#an").value.trim();
+  if(!name){toast("앨범명을 입력해 주세요.");$("#an").focus();return}
+  const data={name,artist:$("#aa").value.trim(),date:$("#ad").value,cover};
+  try{
+    if(a){
+      Object.assign(a,data);
+    }else{
+      albums.unshift({id:uid(),...data,tracks:[],createdAt:Date.now()});
+    }
+    save();
+    render();
+    closeModal();
+    toast(a?"앨범을 수정했어요.":"앨범을 만들었어요.");
+  }catch(err){
+    console.error("Album save failed:",err);
+    toast("앨범을 저장하지 못했어요. 저장 공간을 확인해 주세요.");
+  }
+}}
 function albumDetail(a){current=a;modal(`<div class="modal-head"><h2>${esc(a.name)}</h2><button class="icon" id="mx">×</button></div>${a.cover?`<img class="detail-cover" src="${a.cover}">`:""}<div class="detail-center"><h2>${esc(a.name)}</h2><p>${esc(a.artist||"")} · ${esc(a.date||"")}</p></div><div>${a.tracks.length?a.tracks.map((t,i)=>`<div class="track"><div class="track-no">${i+1}</div><div><div class="track-name">${esc(t.name)}</div><div class="track-time">${fmt(t.duration)}${t.lyrics?.length?" · 가사":""}</div></div><button class="more" data-track="${i}">•••</button></div>`).join(""):`<p class="meta" style="text-align:center">아직 노래가 없어요.</p>`}</div><div class="actions"><button class="glass-btn" id="editA">수정</button><button class="pink" id="addT">＋ 노래 추가</button></div>`);
 $("#mx").onclick=closeModal;$("#editA").onclick=()=>albumForm(a);$("#addT").onclick=()=>trackForm(a);$$("[data-track]").forEach(b=>b.onclick=()=>trackActions(a,+b.dataset.track))}
 function trackForm(a){let file=null,dur=0;modal(`<div class="modal-head"><h2>노래 추가</h2><button class="icon" id="mx">×</button></div><div class="field"><label>노래 제목 *</label><input id="tn" placeholder="노래 제목을 입력하세요"></div><div class="field"><label>음원</label><button class="glass-btn" id="pickSong">MP3 / 음원 불러오기</button><span id="fn" class="meta"></span></div><div class="field"><label>길이(초)</label><input id="td" type="number" min="0" step="1" placeholder="자동 인식"></div><div class="actions"><button class="glass-btn" id="mc">취소</button><button class="pink" id="saveT">SAVE</button></div>`);
@@ -76,6 +98,11 @@ async function trimToolModal(){
     src.buffer=buffer;src.connect(off.destination);src.start(0,a,b);
     const rendered=await off.startRendering();
     const wav=audioBufferToWav(rendered),blob=new Blob([wav],{type:"audio/wav"});
+    const filename=file.name.replace(/\.[^.]+$/,"")+"_trimmed.wav";
+    const downloadBtn=document.createElement("button");
+    downloadBtn.className="glass-btn";downloadBtn.textContent="파일로 저장";
+    downloadBtn.onclick=()=>downloadBlob(blob,filename);
+    $("#saveTrim").parentElement.insertBefore(downloadBtn,$("#saveTrim"));
     const key=uid();await putFile(key,blob);
     if(current){
       current.tracks.push({id:uid(),name:file.name.replace(/\.[^.]+$/,"")+" (trimmed)",duration:b-a,fileKey:key,lyrics:[],favorite:false});
@@ -98,7 +125,21 @@ function audioBufferToWav(buffer){
 
 function downloadBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 function convertModal(){modal(`<div class="modal-head"><h2>MP3 변환</h2><button class="icon" id="mx">×</button></div><div class="help">동영상 파일에서 오디오를 추출해 MP3로 변환합니다. 변환이 끝나면 현재 앨범에 바로 추가할 수 있어요.</div><button class="glass-btn" id="pickVideo">동영상 선택</button><p id="videoName" class="meta"></p><div class="convert-progress"><div class="convert-bar"><i id="bar"></i></div><div class="convert-pct" id="pct">0%</div></div><div class="actions"><button class="glass-btn" id="cancelC">취소</button><button class="pink" id="doConvert" disabled>MP3로 변환</button></div>`);let video=null;$("#mx").onclick=closeModal;$("#cancelC").onclick=closeModal;$("#pickVideo").onclick=()=>$("#videoInput").click();$("#videoInput").onchange=()=>{video=$("#videoInput").files[0];if(video){$("#videoName").textContent=video.name;$("#doConvert").disabled=false}};$("#doConvert").onclick=async()=>{if(!video)return;try{await convertVideo(video)}catch(e){console.error(e);toast("이 파일은 변환할 수 없어요.")}}}
-async function convertVideo(file){let btn=$("#doConvert"),bar=$("#bar"),pct=$("#pct");btn.disabled=true;btn.textContent="변환 중…";let ac=new AudioContext();let ab=await file.arrayBuffer();let decoded=await ac.decodeAudioData(ab);let rate=decoded.sampleRate,channels=Math.min(2,decoded.numberOfChannels),len=decoded.length;let enc=new lamejs.Mp3Encoder(channels,rate,128),chunks=[],block=1152;for(let i=0;i<len;i+=block){let left=decoded.getChannelData(0).subarray(i,Math.min(i+block,len)),right=channels===2?decoded.getChannelData(1).subarray(i,Math.min(i+block,len)):left;let L=new Int16Array(left.length),R=new Int16Array(right.length);for(let j=0;j<left.length;j++){L[j]=Math.max(-1,Math.min(1,left[j]))*32767;R[j]=Math.max(-1,Math.min(1,right[j]))*32767}let mp=channels===2?enc.encodeBuffer(L,R):enc.encodeBuffer(L);if(mp.length)chunks.push(new Int8Array(mp));let p=Math.min(100,Math.round(i/len*100));bar.style.width=p+"%";pct.textContent=p+"%";await new Promise(r=>setTimeout(r,0))}let end=enc.flush();if(end.length)chunks.push(new Int8Array(end));let blob=new Blob(chunks,{type:"audio/mpeg"});let url=URL.createObjectURL(blob);bar.style.width="100%";pct.textContent="100%";btn.textContent="앨범에 저장";btn.disabled=false;$("#cancelC").textContent="파일로 저장";$("#cancelC").onclick=()=>downloadBlob(blob,(file.name.replace(/\.[^.]+$/,"")||"converted")+".mp3");btn.onclick=async()=>{let target=current||albums[0];if(!target){toast("먼저 앨범을 만들어 주세요.");return}let name=file.name.replace(/\.[^.]+$/,"")||"변환된 노래";let key=uid();await putFile(key,blob);target.tracks??=[];target.tracks.push({id:uid(),name,duration:decoded.duration,fileKey:key,lyrics:[]});save();URL.revokeObjectURL(url);closeModal();render();toast(`“${target.name}”에 MP3를 저장했어요.`)};await ac.close()}
+async function convertVideo(file){let btn=$("#doConvert"),bar=$("#bar"),pct=$("#pct");btn.disabled=true;btn.textContent="변환 중…";let ac=new AudioContext();let ab=await file.arrayBuffer();let decoded=await ac.decodeAudioData(ab);let rate=decoded.sampleRate,channels=Math.min(2,decoded.numberOfChannels),len=decoded.length;let enc=new lamejs.Mp3Encoder(channels,rate,128),chunks=[],block=1152;for(let i=0;i<len;i+=block){let left=decoded.getChannelData(0).subarray(i,Math.min(i+block,len)),right=channels===2?decoded.getChannelData(1).subarray(i,Math.min(i+block,len)):left;let L=new Int16Array(left.length),R=new Int16Array(right.length);for(let j=0;j<left.length;j++){L[j]=Math.max(-1,Math.min(1,left[j]))*32767;R[j]=Math.max(-1,Math.min(1,right[j]))*32767}let mp=channels===2?enc.encodeBuffer(L,R):enc.encodeBuffer(L);if(mp.length)chunks.push(new Int8Array(mp));let p=Math.min(100,Math.round(i/len*100));bar.style.width=p+"%";pct.textContent=p+"%";await new Promise(r=>setTimeout(r,0))}let end=enc.flush();if(end.length)chunks.push(new Int8Array(end));let blob=new Blob(chunks,{type:"audio/mpeg"});let url=URL.createObjectURL(blob);bar.style.width="100%";pct.textContent="100%";btn.textContent="변환 완료";btn.disabled=true;
+const filename=(file.name.replace(/\.[^.]+$/,"")||"converted")+".mp3";
+const target=current||albums[0];
+$("#modal .modal-card").innerHTML=`<div class="modal-head"><h2>MP3 변환 완료</h2><button class="icon" id="mx">×</button></div>
+<div class="mp3-done-card"><div class="mp3-done-icon">MP3</div><div><b>${esc(filename)}</b><span>변환이 완료됐어요.</span></div></div>
+<div class="mp3-save-note">이제 저장할 곳을 선택하세요.</div>
+<div class="actions mp3-save-actions"><button class="glass-btn" id="saveFileNow">파일에 저장</button><button class="pink" id="saveAlbumNow" ${target?"":"disabled"}>앨범에 저장</button></div>`;
+$("#mx").onclick=closeModal;
+$("#saveFileNow").onclick=()=>downloadBlob(blob,filename);
+$("#saveAlbumNow").onclick=async()=>{
+  if(!target){toast("먼저 앨범을 만들어 주세요.");return}
+  let name=file.name.replace(/\.[^.]+$/,"")||"변환된 노래",key=uid();
+  await putFile(key,blob);target.tracks??=[];target.tracks.push({id:uid(),name,duration:decoded.duration,fileKey:key,lyrics:[]});save();URL.revokeObjectURL(url);closeModal();render();toast(`“${target.name}”에 MP3를 저장했어요.`)
+};
+await ac.close()}
 $("#heroAdd").onclick=()=>albumForm();$("#emptyAdd").onclick=()=>albumForm();$("#fab").onclick=()=>albumForm();$("#homeBtn").onclick=()=>{closeModal();$("#player").hidden=true;document.body.style.overflow=""};$("#albumGrid").onclick=e=>{let m=e.target.closest("[data-more]");if(m){let a=albums.find(x=>x.id===m.dataset.more);modal(`<div class="modal-head"><h2>${esc(a.name)}</h2><button class="icon" id="mx">×</button></div><div class="actions"><button class="glass-btn" id="op">앨범 열기</button><button class="glass-btn" id="ed">수정</button><button class="glass-btn" id="del">삭제</button></div>`);$("#mx").onclick=closeModal;$("#op").onclick=()=>albumDetail(a);$("#ed").onclick=()=>albumForm(a);$("#del").onclick=async()=>{if(!confirm("앨범을 삭제할까요?"))return;for(let t of a.tracks)await delFile(t.fileKey);albums=albums.filter(x=>x.id!==a.id);save();render();closeModal();toast("앨범을 삭제했어요.")}}else{let c=e.target.closest("[data-id]");if(c)albumDetail(albums.find(x=>x.id===c.dataset.id))}};
 $("#playerClose").onclick=()=>{$("#player").hidden=true;audio.pause();setPlaying(false);document.body.style.overflow=""};$("#miniMain").onclick=()=>$("#player").hidden=false;$("#miniPrev").onclick=prev;$("#miniNext").onclick=next;$("#miniPlay").onclick=()=>$("#pToggle").click();$("#pToggle").onclick=()=>{if(audio.paused){audio.play();setPlaying(true)}else{audio.pause();setPlaying(false)}};$("#pNext").onclick=()=>{if(!queue.length)return;const b=$("#pNext");b.classList.remove("arrow-shift");void b.offsetWidth;b.classList.add("arrow-shift");setTimeout(next,120)};$("#pPrev").onclick=prev;$("#pShuffle").onclick=()=>{shuffle=!shuffle;$("#pShuffle").style.color=shuffle?"var(--pink)":"#fff"};$("#pRepeat").onclick=()=>{repeat=!repeat;$("#pRepeat").style.color=repeat?"var(--pink)":"#fff"};$("#seek").oninput=()=>{if(audio.duration)audio.currentTime=audio.duration*$("#seek").value/100};audio.ontimeupdate=()=>{if(!audio.duration)return;let t=queue[qi],ls=t?.lyrics||[];$("#seek").value=audio.currentTime/audio.duration*100;$("#pCur").textContent=fmt(audio.currentTime);$("#pRemain").textContent="-"+fmt(audio.duration-audio.currentTime);$("#miniRemain").textContent=fmt(audio.duration-audio.currentTime);$$("[data-lyric]").forEach((el,i)=>el.classList.toggle("active",audio.currentTime>=ls[i].start&&audio.currentTime<ls[i].end));let active=$(".lyric.active");if(active)active.scrollIntoView({behavior:"smooth",block:"center"})};audio.onplay=()=>setPlaying(true);audio.onpause=()=>setPlaying(false);audio.onended=next;
 $("#queueBtn").onclick=queueOpen;$("#closeQueue").onclick=()=>$("#queue").hidden=true;$("#queueList").onclick=e=>{let x=e.target.closest("[data-q]");if(x){qi=+x.dataset.q;$("#queue").hidden=true;loadTrack()}};$("#lyricsBtn").onclick=()=>$("#lyrics").scrollIntoView({behavior:"smooth"});$("#editLyrics").onclick=()=>queue[qi]&&lyricsEditor(queue[qi]);$("#convertBtn").onclick=convertModal;$("#homeMp3Tool").onclick=convertModal;$("#homeTrimTool").onclick=trimToolModal;
