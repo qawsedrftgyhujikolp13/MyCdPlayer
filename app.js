@@ -103,70 +103,61 @@ function trackForm(a){let file=null,dur=0;modal(`<div class="modal-head"><h2>노
 $("#mx").onclick=closeModal;$("#mc").onclick=closeModal;$("#pickSong").onclick=()=>$("#songInput").click();$("#songInput").onchange=()=>{file=$("#songInput").files[0];if(!file)return;$("#fn").textContent=" · "+file.name;let u=URL.createObjectURL(file),x=new Audio;x.onloadedmetadata=()=>{$("#td").value=Math.round(x.duration);dur=x.duration;URL.revokeObjectURL(u)};x.src=u};$("#saveT").onclick=async()=>{let name=$("#tn").value.trim();if(!name)return toast("노래 제목을 입력해 주세요.");let d=+$("#td").value||dur||0,key=file?uid():"";if(file)await putFile(key,file);a.tracks.push({id:uid(),name,duration:d,fileKey:key,lyrics:[]});save();albumDetail(a);toast("노래를 추가했어요.")}}
 function trackActions(a,i){let t=a.tracks[i];modal(`<div class="modal-head"><h2>${esc(t.name)}</h2><button class="icon" id="mx">×</button></div><p class="meta">${fmt(t.duration)} · ${esc(a.artist||"")}</p><div class="actions"><button class="glass-btn" id="lyricsEdit">가사 편집</button><button class="glass-btn" id="delT">삭제</button><button class="pink" id="playT">재생</button></div>`);$("#mx").onclick=closeModal;$("#playT").onclick=()=>start(a,[i]);$("#delT").onclick=async()=>{await delFile(t.fileKey);a.tracks.splice(i,1);save();albumDetail(a);toast("노래를 삭제했어요.")};$("#lyricsEdit").onclick=()=>lyricsEditor(t)}
 function lyricsEditor(t){
-  let rows=(t.lyrics||[]).map(x=>({...x}));
+  let rows=(t.lyrics||[]).map(x=>({
+    start:Number(x.start)||0,
+    end:Number(x.end)||0,
+    text:(x.text===undefined||x.text===null)?"":String(x.text)
+  }));
   if(!rows.length)rows=[{start:0,end:5,text:""}];
-  const syncRows=()=>{
-    $$("#le [data-i]").forEach(row=>{
-      const i=+row.dataset.i;
-      if(!rows[i]) rows[i]={start:0,end:5,text:""};
-      rows[i]={
-        start:parseFloat($(".ls",row).value)||0,
-        end:parseFloat($(".le",row).value)||0,
-        text:$(".lt",row).value.trim()||" "
-      };
-    });
-  };
-  const rowsHTML=()=>rows.map((r,i)=>`<div class="lyric-row" data-i="${i}">
-    <input class="ls" type="number" min="0" step=".1" value="${r.start}" placeholder="시작">
-    <input class="le" type="number" min="0" step=".1" value="${r.end}" placeholder="끝">
-    <input class="lt" value="${r.text===" "?"":esc(r.text)}" placeholder="가사 / 공백=♪">
-    <button type="button" data-rm="${i}" aria-label="구간 삭제">×</button>
-  </div>`).join("");
-  modal(`<div class="modal-head"><h2>가사 편집</h2><button class="icon" id="mx">×</button></div>
-    <div class="help"><b>예시</b> 12초 → 16초 → 안녕 오늘도<br>가사 칸을 비워 저장하면 그 구간은 <b>♪ 간주</b>가 됩니다.</div>
-    <div class="lyric-editor" id="le">${rowsHTML()}</div>
-    <div class="actions"><button class="glass-btn" id="addL">＋ 구간</button><button class="pink" id="saveL">SAVE</button></div>`);
-  $("#mx").onclick=closeModal;
-  $("#addL").onclick=()=>{
-    syncRows();
-    const last=rows[rows.length-1];
-    const nextStart=last?Math.max(0,Number(last.end)||0):0;
-    rows.push({start:nextStart,end:nextStart+5,text:""});
-    lyricsEditorWithRows(t,rows);
-  };
-  $$("[data-rm]").forEach(b=>b.onclick=()=>{
-    syncRows();
-    rows.splice(+b.dataset.rm,1);
-    if(!rows.length)rows.push({start:0,end:5,text:""});
-    lyricsEditorWithRows(t,rows);
-  });
-  $("#saveL").onclick=()=>{
-    syncRows();
-    t.lyrics=rows.filter(x=>x.end>x.start).sort((a,b)=>a.start-b.start);
-    save();closeModal();renderLyrics(t);toast("가사를 저장했어요.");
-  };
-}
-function lyricsEditorWithRows(t,preservedRows){
-  const original=t.lyrics;
-  t.lyrics=preservedRows.map(x=>({...x}));
-  lyricsEditor(t);
-  t.lyrics=original;
-}
 
-function activeTrack(){return queue[qi]||null}
-function updateFavoriteUI(){
-  const on=!!activeTrack()?.favorite;
-  $("#pFav")?.classList.toggle("active",on);
-  $("#miniFav")?.classList.toggle("active",on);
-}
-function toggleFavorite(){
-  const t=activeTrack();
-  if(!t||!current)return;
-  t.favorite=!t.favorite;
-  save();
-  updateFavoriteUI();
-  if(viewFilter==="fav")render();
-  toast(t.favorite?"찜한 노래에 추가했어요.":"찜한 노래에서 뺐어요.");
+  const readRows=()=>{
+    rows=$$("#le .lyric-row").map(row=>({
+      start:Math.max(0,Number($(".ls",row)?.value)||0),
+      end:Math.max(0,Number($(".le",row)?.value)||0),
+      text:$(".lt",row)?.value ?? ""
+    }));
+  };
+  const attr=v=>esc(String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"));
+
+  const openEditor=()=>{
+    const rowsHTML=rows.map((r,i)=>`<div class="lyric-row" data-i="${i}">
+      <input class="ls" type="number" min="0" step=".1" value="${Number(r.start)||0}" placeholder="시작">
+      <input class="le" type="number" min="0" step=".1" value="${Number(r.end)||0}" placeholder="끝">
+      <input class="lt" value="${attr(r.text)}" placeholder="가사 / 비워두면 ♪">
+      <button type="button" data-rm="${i}" aria-label="구간 삭제">×</button>
+    </div>`).join("");
+
+    modal(`<div class="modal-head"><h2>가사 편집</h2><button class="icon" id="mx">×</button></div>
+      <div class="help"><b>구간별 가사</b><br>시작/끝 시간을 입력하고 가사를 적으세요. 가사를 비워두면 ♪ 간주로 저장됩니다.</div>
+      <div class="lyric-editor" id="le">${rowsHTML}</div>
+      <div class="actions"><button class="glass-btn" id="addL">＋ 구간</button><button class="pink" id="saveL">SAVE</button></div>`);
+
+    $("#mx").onclick=closeModal;
+    $("#addL").onclick=()=>{
+      readRows();
+      const last=rows[rows.length-1];
+      const nextStart=Math.max(0,Number(last?.end)||0);
+      rows.push({start:nextStart,end:nextStart+5,text:""});
+      openEditor();
+    };
+    $$("#le [data-rm]").forEach(b=>b.onclick=()=>{
+      readRows();
+      rows.splice(Number(b.dataset.rm),1);
+      if(!rows.length)rows.push({start:0,end:5,text:""});
+      openEditor();
+    });
+    $("#saveL").onclick=()=>{
+      readRows();
+      t.lyrics=rows.filter(x=>x.end>x.start).sort((a,b)=>a.start-b.start).map(x=>({
+        start:x.start,end:x.end,text:x.text===""?" ":x.text
+      }));
+      save();
+      closeModal();
+      renderLyrics(t);
+      toast("가사를 저장했어요.");
+    };
+  };
+  openEditor();
 }
 async function start(a,inds,at=0){
   current=a;
@@ -248,7 +239,14 @@ function prev(){
   }
   loadTrack(true);
 }
-function showMini(){$("#mini").hidden=false;$("#miniTitle").textContent=queue[qi]?.name||"—";$("#miniArtist").textContent=current?.artist||"—"}
+function showMini(){
+  $("#mini").hidden=false;
+  const t=queue[qi];
+  $("#miniTitle").textContent=t?.name||"—";
+  $("#miniArtist").textContent=current?.artist||"—";
+  const cover=$("#miniCover");
+  if(cover)cover.innerHTML=current?.cover?`<img src="${current.cover}" alt="">`:`<span>♫</span>`;
+}
 function media(t){
   if(!("mediaSession" in navigator))return;
   try{
@@ -271,7 +269,15 @@ function media(t){
     try{navigator.mediaSession.setActionHandler(n,fn)}catch{}
   }
 }
-function renderLyrics(t){let box=$("#lyricsLines"),ls=t?.lyrics||[];if(!ls.length){box.innerHTML='<p class="meta" style="text-align:center;padding:20px">등록된 가사가 없어요.</p>';return}box.innerHTML=ls.map((l,i)=>`<div class="lyric ${l.text===" "?"interlude":""}" data-lyric="${i}">${l.text===" "?"♪":esc(l.text)}</div>`).join("")}
+function renderLyrics(t){
+  const box=$("#lyricsLines"),ls=t?.lyrics||[];
+  if(!ls.length){box.innerHTML='<p class="meta" style="text-align:center;padding:20px">등록된 가사가 없어요.</p>';return}
+  box.innerHTML=ls.map((l,i)=>{
+    const text=String(l.text??"");
+    const interlude=!text.trim();
+    return `<div class="lyric ${interlude?"interlude":""}" data-lyric="${i}">${interlude?"♪":esc(text)}</div>`;
+  }).join("");
+}
 function renderQueue(){$("#queueList").innerHTML=queue.map((t,i)=>`<div class="queue-item ${i===qi?"active":""}" data-q="${i}"><span class="queue-dot">${i===qi?"●":""}</span><span>${esc(t.name)}<small class="meta"> · ${fmt(t.duration)}</small></span><span class="queue-now">${i===qi?"NOW":""}</span></div>`).join("")}
 function queueOpen(){renderQueue();$("#queue").hidden=false}
 
