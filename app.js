@@ -1,16 +1,142 @@
-const DB='mcpdb',V=1;let db,albums=[],cur=null,idx=0,mode='sequence',trimFile=null,trimDur=0,mp3=null;const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],uid=()=>crypto.randomUUID?.()||Date.now()+Math.random(),fmt=x=>{x=Math.max(0,+x||0);return Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0')};function esc(s=''){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function openDB(){return new Promise((ok,no)=>{let r=indexedDB.open(DB,V);r.onupgradeneeded=()=>{let d=r.result;d.objectStoreNames.contains('albums')||d.createObjectStore('albums',{keyPath:'id'});d.objectStoreNames.contains('tracks')||d.createObjectStore('tracks',{keyPath:'id'})};r.onsuccess=()=>{db=r.result;ok()};r.onerror=()=>no(r.error)})}function all(n){return new Promise((ok,no)=>{let r=db.transaction(n).objectStore(n).getAll();r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}function one(n,id){return new Promise((ok,no)=>{let r=db.transaction(n).objectStore(n).get(id);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}function put(n,v){return new Promise((ok,no)=>{let r=db.transaction(n,'readwrite').objectStore(n).put(v);r.onsuccess=()=>ok();r.onerror=()=>no(r.error)})}function del(n,id){return new Promise((ok,no)=>{let r=db.transaction(n,'readwrite').objectStore(n).delete(id);r.onsuccess=()=>ok();r.onerror=()=>no(r.error)})}function data(f){return new Promise(ok=>{if(!f)return ok('');let r=new FileReader;r.onload=()=>ok(r.result);r.readAsDataURL(f)})}function duration(f){return new Promise((ok,no)=>{let u=URL.createObjectURL(f),a=new Audio;a.onloadedmetadata=()=>{URL.revokeObjectURL(u);ok(a.duration)};a.onerror=no;a.src=u})}
-function view(n){$$('section').forEach(x=>x.classList.remove('on'));$('#'+n+'View').classList.add('on');$('#back').style.visibility=n==='home'?'hidden':'visible';$('#title').textContent=n==='home'?'My Cd Player':n==='album'?(cur?.name||'앨범'):'CD Player'}
-async function load(){albums=await all('albums');albums.sort((a,b)=>a.name.localeCompare(b.name,'ko',{numeric:true,sensitivity:'base'}));drawHome()}
-function drawHome(){let box=$('#albums');box.innerHTML='';$('#empty').style.display=albums.length?'none':'block';albums.forEach(a=>{let d=document.createElement('article');d.className='album';d.innerHTML=`<img src="${a.cover||''}"><div><h3>${esc(a.name)}</h3><p>${esc(a.artist||'가수명 없음')}</p><p>${a.date||'발매일 없음'}</p></div><button class="menu">•••</button>`;d.onclick=()=>openAlbum(a.id);d.querySelector('.menu').onclick=e=>{e.stopPropagation();editAlbum(a.id)};box.appendChild(d)})}
-async function openAlbum(id){cur=await one('albums',id);cur.tracks=(await all('tracks')).filter(t=>t.albumId===id).sort((a,b)=>a.order-b.order);$('#albumHero').innerHTML=`<img src="${cur.cover||''}"><div><p class="pink">ALBUM</p><h1>${esc(cur.name)}</h1><p>${esc(cur.artist||'가수명 없음')}</p><p>${cur.date||'발매일 없음'} · ${cur.tracks.length}곡</p></div>`;let box=$('#tracks');box.innerHTML='';if(!cur.tracks.length)box.innerHTML='<div id="empty"><strong>아직 노래가 없어요</strong><br>오른쪽 아래 +로 MP3를 추가해보세요.</div>';cur.tracks.forEach((t,i)=>{let d=document.createElement('div');d.className='track';d.innerHTML=`<b>${String(i+1).padStart(2,'0')}</b><span>${esc(t.title)}</span><span class="len">${fmt(t.end-t.start)}</span><button>▶</button>`;d.onclick=()=>play(i);box.appendChild(d)});view('album')}
-async function play(i){idx=i;view('player');let t=cur.tracks[i],a=$('#audio');if(a.src)a.src='';a.src=URL.createObjectURL(t.blob);a.currentTime=t.start||0;$('#playerAlbum').textContent=cur.name;$('#song').textContent=t.title;$('#artist').textContent=cur.artist||'';$('#art').src=cur.cover||'';$('#play').textContent='▶';$('.cd')?.classList.remove('playing')}
-$('#play').onclick=()=>{let a=$('#audio');if(a.paused){a.play();$('.cd').classList.add('playing');$('#play').textContent='Ⅱ'}else{a.pause();$('.cd').classList.remove('playing');$('#play').textContent='▶'}};$('#audio').ontimeupdate=()=>{let t=cur?.tracks[idx];if(!t)return;let e=t.end||$('#audio').duration,s=Math.max(0,$('#audio').currentTime-t.start);$('#cur').textContent=fmt(s);$('#dur').textContent=fmt(e-t.start);$('#progress').value=s/Math.max(1,e-t.start)*100;if($('#audio').currentTime>=e-.05)next(true)};$('#progress').oninput=()=>{let t=cur.tracks[idx];$('#audio').currentTime=t.start+(+$('#progress').value/100)*(t.end-t.start)};async function next(auto=false){if(!cur?.tracks.length)return;if(mode==='repeatOne'){if(auto){let t=cur.tracks[idx];$('#audio').currentTime=t.start;$('#audio').play()}return}let n=mode==='shuffle'?Math.floor(Math.random()*cur.tracks.length):idx+1;if(n>=cur.tracks.length){if(mode==='repeatAll')n=0;else return}await play(n);$('#audio').play();$('.cd').classList.add('playing');$('#play').textContent='Ⅱ'}$('#next').onclick=()=>next(false);$('#prev').onclick=async()=>{let n=idx-1;if(n<0)n=cur.tracks.length-1;await play(n);$('#audio').play();$('.cd').classList.add('playing');$('#play').textContent='Ⅱ'};$$('.modes button').forEach(b=>b.onclick=()=>{$$('.modes button').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.m});
-function modal(html){$('#modal').innerHTML=html;$('#modal').classList.add('show');$('#modal [data-x]').onclick=close}function close(){$('#modal').classList.remove('show');$('#modal').innerHTML=''}
-const albumForm=()=>`<div class="sheet"><div class="head"><button data-x>×</button><h2>새 앨범</h2><span></span></div><div class="stack"><label>앨범명 *<input id="an" placeholder="앨범명을 입력하세요."></label><label>가수명<input id="aa" placeholder="가수명을 입력하세요."></label><label>발매일<input id="ad" type="date"></label><label class="file">사진을 넣어주세요. 📸<input id="ac" type="file" accept="image/*"></label><button id="as" class="save">저장 / SAVE</button></div></div>`;
-$('#addAlbum').onclick=()=>{modal(albumForm());$('#as').onclick=async()=>{let n=$('#an').value.trim();if(!n)return alert('앨범명은 필수예요.');await put('albums',{id:uid(),name:n,artist:$('#aa').value.trim(),date:$('#ad').value,cover:await data($('#ac').files[0]),createdAt:Date.now()});close();load()}};
-$('#addTrack').onclick=()=>{modal(`<div class="sheet"><div class="head"><button data-x>×</button><h2>노래 추가</h2><span></span></div><div class="tools"><button id="trim" class="tool"><i class="orb"></i><b>노래 길이 편집</b><small>시작 / 끝 구간을 조절</small></button><button id="conv" class="tool"><i class="orb red"></i><b>MP3 변환</b><small>동영상 파일을 MP3로</small></button></div><div class="stack"><label>노래 제목<input id="tn" placeholder="노래 제목 입력"></label><label class="file">MP3 파일 업로드<input id="tf" type="file" accept="audio/mpeg,.mp3"></label><button id="ts" class="save">저장 / SAVE</button></div></div>`);$('#trim').onclick=()=>trim($('#tn').value.trim());$('#conv').onclick=convert;$('#ts').onclick=async()=>{let f=$('#tf').files[0];if(!f)return alert('MP3 파일을 선택해주세요.');let d=await duration(f);await put('tracks',{id:uid(),albumId:cur.id,title:$('#tn').value.trim()||f.name.replace(/\.[^.]+$/,''),blob:f,start:0,end:d,order:cur.tracks.length});close();openAlbum(cur.id)}};
-function trim(title=''){modal(`<div class="sheet"><div class="head"><button data-x>×</button><h2>노래 길이 편집</h2><span></span></div><div class="stack"><label class="file">MP3 불러오기<input id="mf" type="file" accept="audio/mpeg,.mp3"></label><div id="mi" class="status">파일을 불러오면 •———• 조절기가 활성화됩니다.</div><div class="wave"><div class="bars"></div><div class="trimbar"><div id="sel" class="sel"><span id="hl" class="handle l"></span><span id="hr" class="handle r"></span></div></div></div><div class="times"><span id="sl">0:00</span><span id="el">0:00</span></div><div class="twocol"><label>시작<input id="ss" type="number" min="0" step=".1" value="0"></label><label>끝<input id="ee" type="number" min="0" step=".1" value="0"></label></div><button id="ta" class="save" disabled>이 구간으로 추가</button></div></div>`);let f=$('#mf'),s=$('#ss'),e=$('#ee'),sel=$('#sel');f.onchange=async()=>{trimFile=f.files[0];trimDur=await duration(trimFile);s.value=0;e.value=trimDur.toFixed(1);$('#mi').textContent=trimFile.name+' · '+fmt(trimDur);$('#ta').disabled=false;sync()};function sync(){let x=Math.max(0,Math.min(trimDur,+s.value||0)),y=Math.max(x,Math.min(trimDur,+e.value||trimDur));s.value=x;e.value=y;sel.style.left=x/trimDur*100+'%';sel.style.right=(100-y/trimDur*100)+'%';$('#sl').textContent=fmt(x);$('#el').textContent=fmt(y)}s.oninput=e.oninput=sync;[['#hl',1],['#hr',0]].forEach(([q,left])=>{$(q).onpointerdown=ev=>{ev.target.setPointerCapture(ev.pointerId);ev.target.onpointermove=x=>{let r=document.querySelector('.trimbar').getBoundingClientRect(),p=Math.max(0,Math.min(1,(x.clientX-r.left)/r.width)),v=p*trimDur;if(left)s.value=Math.min(v,+e.value);else e.value=Math.max(v,+s.value);sync()}}});$('#ta').onclick=async()=>{await put('tracks',{id:uid(),albumId:cur.id,title:title||trimFile.name.replace(/\.[^.]+$/,''),blob:trimFile,start:+s.value,end:+e.value,order:cur.tracks.length});close();openAlbum(cur.id)}}
-function convert(){modal(`<div class="sheet"><div class="head"><button data-x>×</button><h2>MP3 변환</h2><span></span></div><div class="stack"><label class="file">동영상 파일 선택<input id="vf" type="file" accept="video/*"></label><label>노래 제목<input id="ct" placeholder="노래 제목 입력"></label><div id="cs" class="status">파일을 선택하면 변환 버튼이 활성화됩니다.</div><div class="bar"><i id="bp"></i></div><button id="cb" class="save" disabled>MP3으로 변환</button><button id="dl" class="save" disabled>저장</button><button id="gh" class="save" style="display:none">홈 화면으로</button><p class="note">동영상 파일은 기기에서 변환합니다. YouTube 링크를 브라우저만으로 직접 MP3로 가져오는 기능은 CORS/서비스 정책 때문에 넣지 않았습니다.</p></div></div>`);$('#vf').onchange=()=>{$('#cb').disabled=!$('#vf').files[0];if($('#vf').files[0]&&!$('#ct').value)$('#ct').value=$('#vf').files[0].name.replace(/\.[^.]+$/,'')};$('#cb').onclick=async()=>{let f=$('#vf').files[0];$('#cb').disabled=true;$('#cs').textContent='FFmpeg를 불러오는 중…';$('#bp').style.width='8%';try{let F=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'),U=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js'),ff=new F.FFmpeg(),base='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';await ff.load({coreURL:await U.toBlobURL(base+'/ffmpeg-core.js','text/javascript'),wasmURL:await U.toBlobURL(base+'/ffmpeg-core.wasm','application/wasm')});await ff.writeFile('in',await U.fetchFile(f));$('#bp').style.width='30%';ff.on('progress',p=>$('#bp').style.width=(30+p.progress*70)+'%');await ff.exec(['-i','in','-vn','-codec:a','libmp3lame','-q:a','2','out.mp3']);let d=await ff.readFile('out.mp3');mp3=new Blob([d.buffer],{type:'audio/mpeg'});$('#cs').textContent='변환 완료! 저장을 눌러주세요.';$('#bp').style.width='100%';$('#dl').disabled=false;$('#dl').onclick=()=>{let a=document.createElement('a');a.href=URL.createObjectURL(mp3);a.download=($('#ct').value.trim()||'MCP Track')+'.mp3';a.click();$('#gh').style.display='block'};$('#gh').onclick=()=>{close();view('home')}}catch(e){console.error(e);$('#cs').textContent='변환 실패. 파일이 너무 크거나 iPhone 메모리가 부족할 수 있어요.';$('#cb').disabled=false}}}
-async function editAlbum(id){let a=await one('albums',id);modal(`<div class="sheet"><div class="head"><button data-x>×</button><h2>앨범 수정</h2><span></span></div><div class="stack"><label>앨범명 *<input id="en" value="${esc(a.name)}"></label><label>가수명<input id="ea" value="${esc(a.artist||'')}"></label><label>발매일<input id="ed" type="date" value="${a.date||''}"></label><label class="file">커버 변경<input id="ec" type="file" accept="image/*"></label><button id="eu" class="save">저장 / SAVE</button><button id="ex" class="danger">앨범 삭제</button></div></div>`);$('#eu').onclick=async()=>{a.name=$('#en').value.trim()||a.name;a.artist=$('#ea').value.trim();a.date=$('#ed').value;let f=$('#ec').files[0];if(f)a.cover=await data(f);await put('albums',a);close();load()};$('#ex').onclick=async()=>{if(!confirm('앨범과 안의 곡을 삭제할까요?'))return;for(let t of await all('tracks'))if(t.albumId===id)await del('tracks',t.id);await del('albums',id);close();load()}}
-$('#home').onclick=()=>{view('home');load()};$('#back').onclick=()=>view($('#playerView').classList.contains('on')?'album':'home');window.addEventListener('load',async()=>{await openDB();await load();view('home');if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});setTimeout(()=>$('#splash').style.opacity=0,1000);setTimeout(()=>$('#splash').remove(),1900)});
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const DB='mcp-db', STORE='albums';
+let db, albums=[], currentAlbum=null, currentAudioUrl=null;
+
+const openDB=()=>new Promise((res,rej)=>{
+  const r=indexedDB.open(DB,1);
+  r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id'});
+  r.onsuccess=()=>{db=r.result;res(db)};r.onerror=()=>rej(r.error)
+});
+const getAll=()=>new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const put=x=>new Promise((res,rej)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).put(x);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)});
+const del=id=>new Promise((res,rej)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)});
+
+function esc(x=''){return x.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function duration(s){if(!isFinite(s))return '--:--';s=Math.max(0,Math.round(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}
+function toast(t){const x=document.createElement('div');x.className='toast';x.textContent=t;document.body.append(x);setTimeout(()=>x.remove(),1800)}
+function sortAlbums(){albums.sort((a,b)=>a.title.localeCompare(b.title,'ko',{numeric:true,sensitivity:'base'}))}
+function coverHTML(a,cls='cover'){return a.cover?`<img class="${cls}" src="${a.cover}" alt="">`:`<div class="${cls} placeholder">M</div>`}
+
+function renderHome(){
+ sortAlbums(); $('#albumCount').textContent=albums.length;
+ const grid=$('#albumGrid');
+ if(!albums.length){grid.innerHTML=`<div class="empty"><div class="empty-inner"><div class="empty-orb">＋</div><h2>앨범이 없네요</h2><p>오른쪽 아래 + 버튼으로<br>나만의 앨범을 만들어보아요.</p></div></div>`;return}
+ grid.innerHTML=albums.map(a=>`<article class="album-card glass" data-id="${a.id}">
+   ${coverHTML(a)}
+   <div class="album-meta"><h3>${esc(a.title)}</h3><p class="artist">${esc(a.artist||'아티스트 미입력')}</p><p>${esc(a.date||'발매일 미입력')}</p></div>
+   <button class="card-menu" data-menu="${a.id}">•••</button>
+ </article>`).join('');
+ $$('.album-card').forEach(c=>c.addEventListener('click',e=>{if(e.target.closest('.card-menu'))return;openAlbum(c.dataset.id)}));
+ $$('.card-menu').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();albumMenu(b.dataset.menu)}));
+}
+function show(v){$$('.view').forEach(x=>x.classList.remove('active'));$(v).classList.add('active');scrollTo({top:0,behavior:'smooth'})}
+function openAlbum(id){currentAlbum=albums.find(a=>a.id===id);if(!currentAlbum)return;show('#albumView');renderAlbum()}
+function renderAlbum(){
+ const a=currentAlbum;
+ $('#detailCover').style.backgroundImage=a.cover?`url("${a.cover}")`:'linear-gradient(145deg,#ffc2db,#ff5fa2)';
+ $('#detailArtist').textContent=a.artist||'아티스트 미입력';$('#detailTitle').textContent=a.title;$('#detailDate').textContent=a.date||'';
+ const list=$('#trackList');
+ list.innerHTML=a.tracks.length?a.tracks.map((t,i)=>`<div class="track">
+ <div class="track-no">${String(i+1).padStart(2,'0')}</div><div><div class="track-title">${esc(t.title)}</div><div class="track-sub">${esc(t.fileName||'MP3')}</div></div>
+ <div class="track-time">${duration((t.end??t.duration)-(t.start??0))}</div><button class="track-more" data-track="${t.id}">•••</button>
+ </div>`).join(''):`<div class="empty" style="min-height:35svh"><div class="empty-inner"><div class="empty-orb">♪</div><h2>아직 노래가 없어요</h2><p>＋ 버튼으로 MP3를 추가해보세요.</p></div></div>`;
+ $$('.track-more').forEach(b=>b.onclick=()=>trackMenu(b.dataset.track));
+}
+function closeModal(){$('#modalLayer').classList.add('hidden');$('#modal').innerHTML=''}
+function modal(html){$('#modal').innerHTML=html;$('#modalLayer').classList.remove('hidden')}
+function albumForm(edit=null){
+ modal(`<div class="modal-head"><h2>${edit?'앨범 수정':'새 앨범'}</h2><button class="close" id="close">×</button></div>
+ <div class="field"><label>앨범명 *</label><input id="aTitle" value="${esc(edit?.title||'')}" placeholder="앨범명을 입력하세요."></div>
+ <div class="field"><label>가수명</label><input id="aArtist" value="${esc(edit?.artist||'')}" placeholder="가수명을 입력하세요."></div>
+ <div class="field"><label>발매일</label><input id="aDate" type="date" value="${edit?.date||''}"></div>
+ <div class="file-box"><label class="file-label" for="aCover">📸 사진을 넣어주세요</label><input id="aCover" type="file" accept="image/*">${edit?.cover?`<img id="preview" class="preview" src="${edit.cover}">`:`<img id="preview" class="preview" hidden>`}</div>
+ <button class="primary" id="saveAlbum">${edit?'수정 / SAVE':'저장 / SAVE'}</button>`);
+ $('#close').onclick=closeModal;
+ $('#aCover').onchange=e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>{$('#preview').src=r.result;$('#preview').hidden=false};r.readAsDataURL(f)}};
+ $('#saveAlbum').onclick=async()=>{
+  const title=$('#aTitle').value.trim();if(!title){toast('앨범명을 입력해주세요.');return}
+  let cover=edit?.cover||'';const f=$('#aCover').files[0];if(f)cover=await dataURL(f);
+  const a=edit||{id:crypto.randomUUID(),tracks:[]};Object.assign(a,{title,artist:$('#aArtist').value.trim(),date:$('#aDate').value,cover});
+  await put(a);albums=await getAll();closeModal();renderHome();toast(edit?'앨범이 수정됐어요.':'앨범이 만들어졌어요.');
+ };
+}
+function albumMenu(id){
+ const a=albums.find(x=>x.id===id);if(!a)return;
+ modal(`<div class="modal-head"><h2>${esc(a.title)}</h2><button class="close" id="close">×</button></div>
+ <div class="menu-stack"><button id="edit">앨범 수정</button><button class="danger" id="delete">앨범 삭제</button></div>`);
+ $('#close').onclick=closeModal;$('#edit').onclick=()=>albumForm(a);
+ $('#delete').onclick=async()=>{if(confirm('이 앨범을 삭제할까요?')){await del(id);albums=await getAll();closeModal();renderHome();toast('삭제했어요.')}}}
+function trackForm(){
+ modal(`<div class="modal-head"><h2>노래 추가</h2><button class="close" id="close">×</button></div>
+ <div class="field"><label>노래 제목</label><input id="tTitle" placeholder="노래 제목을 입력하세요."></div>
+ <div class="file-box"><label class="file-label" for="tFile">🎵 MP3 파일 업로드</label><input id="tFile" type="file" accept="audio/mpeg,audio/mp3,audio/*"><p id="fileName" class="muted">선택된 파일 없음</p></div>
+ <button class="primary" id="saveTrack">저장 / SAVE</button>`);
+ $('#close').onclick=closeModal;$('#tFile').onchange=e=>{$('#fileName').textContent=e.target.files[0]?.name||'선택된 파일 없음'};
+ $('#saveTrack').onclick=async()=>{const f=$('#tFile').files[0];if(!f){toast('MP3 파일을 선택해주세요.');return}
+ const title=$('#tTitle').value.trim()||f.name.replace(/\.[^.]+$/,'');const dur=await getDuration(f);
+ currentAlbum.tracks.push({id:crypto.randomUUID(),title,fileName:f.name,blob:await f.arrayBuffer(),duration:dur,start:0,end:dur});
+ await put(currentAlbum);albums=await getAll();closeModal();renderAlbum();toast('노래가 추가됐어요.')};
+}
+function trackMenu(id){
+ const t=currentAlbum.tracks.find(x=>x.id===id);
+ modal(`<div class="modal-head"><h2>${esc(t.title)}</h2><button class="close" id="close">×</button></div>
+ <div class="menu-stack"><button id="trim">노래 길이 편집</button><button id="play">재생</button><button class="danger" id="delete">노래 삭제</button></div>`);
+ $('#close').onclick=closeModal;$('#trim').onclick=()=>trimForm(t);$('#play').onclick=()=>{playTrack(t);closeModal()};
+ $('#delete').onclick=async()=>{currentAlbum.tracks=currentAlbum.tracks.filter(x=>x.id!==id);await put(currentAlbum);albums=await getAll();closeModal();renderAlbum();toast('노래를 삭제했어요.')};
+}
+function trimForm(t){
+ modal(`<div class="modal-head"><h2>노래 길이 편집</h2><button class="close" id="close">×</button></div>
+ <div class="file-box"><label class="file-label" for="trimFile">MP3 불러오기</label><input id="trimFile" type="file" accept="audio/*"><p class="muted" id="trimName">${esc(t.fileName||'현재 곡 사용')}</p></div>
+ <div class="range-wrap"><div class="range-track"></div><input id="rStart" type="range" min="0" max="${t.duration}" step=".1" value="${t.start||0}"><input id="rEnd" type="range" min="0" max="${t.duration}" step=".1" value="${t.end??t.duration}"></div>
+ <p class="muted" id="rangeText">${duration(t.start||0)} — ${duration(t.end??t.duration)} / 원본 ${duration(t.duration)}</p>
+ <button class="primary" id="saveTrim">저장 / SAVE</button>`);
+ $('#close').onclick=closeModal;
+ const update=()=>{$('#rangeText').textContent=`${duration(+$('#rStart').value)} — ${duration(+$('#rEnd').value)} / 원본 ${duration(t.duration)}`};
+ $('#rStart').oninput=()=>{if(+$('#rStart').value>+$('#rEnd').value-0.1)$('#rStart').value=+$('#rEnd').value-0.1;update()};
+ $('#rEnd').oninput=()=>{if(+$('#rEnd').value<+$('#rStart').value+0.1)$('#rEnd').value=+$('#rStart').value+0.1;update()};
+ $('#trimFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;t.blob=await f.arrayBuffer();t.fileName=f.name;t.duration=await getDuration(f);t.start=0;t.end=t.duration;$('#rStart').max=t.duration;$('#rEnd').max=t.duration;$('#rStart').value=0;$('#rEnd').value=t.duration;$('#trimName').textContent=f.name;update()};
+ $('#saveTrim').onclick=async()=>{t.start=+$('#rStart').value;t.end=+$('#rEnd').value;await put(currentAlbum);albums=await getAll();closeModal();renderAlbum();toast('길이를 저장했어요.')};
+}
+function playTrack(t){
+ const blob=new Blob([t.blob],{type:'audio/mpeg'});if(currentAudioUrl)URL.revokeObjectURL(currentAudioUrl);currentAudioUrl=URL.createObjectURL(blob);
+ const p=$('#player');p.src=currentAudioUrl;p.currentTime=t.start||0;p.play().catch(()=>{});p.ontimeupdate=()=>{if(p.currentTime>=(t.end??t.duration)){p.pause();p.currentTime=t.start||0}};
+ toast(`재생 중 · ${t.title}`);
+}
+async function dataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+function getDuration(file){return new Promise(res=>{const a=document.createElement('audio');a.preload='metadata';a.onloadedmetadata=()=>{URL.revokeObjectURL(a.src);res(isFinite(a.duration)?a.duration:0)};a.src=URL.createObjectURL(file)})}
+
+async function videoToMp3(){
+ modal(`<div class="modal-head"><h2>MP3 변환</h2><button class="close" id="close">×</button></div>
+ <div class="file-box"><label class="file-label" for="videoFile">🎬 동영상 파일 선택</label><input id="videoFile" type="file" accept="video/*"><p id="videoName" class="muted">선택된 파일 없음</p></div>
+ <button class="primary" id="convert" disabled>MP3으로 변환</button><div class="progress"><i id="bar"></i></div><p class="convert-status" id="status">파일을 선택하면 변환할 수 있어요.</p><button class="secondary" id="download" disabled style="width:100%;margin-top:8px">저장</button>`);
+ $('#close').onclick=closeModal;
+ $('#videoFile').onchange=e=>{const f=e.target.files[0];if(f){$('#videoName').textContent=f.name;$('#convert').disabled=false;$('#status').textContent='변환 준비 완료'}}};
+ $('#convert').onclick=async()=>{
+  const f=$('#videoFile').files[0];if(!f)return;$('#convert').disabled=true;$('#status').textContent='오디오 추출 중…';
+  try{
+   if(!window.lamejs){await loadScript('https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js')}
+   const ctx=new AudioContext(), source=ctx.createMediaElementSource(document.createElement('video'));
+   const v=document.createElement('video');v.src=URL.createObjectURL(f);v.muted=true;v.crossOrigin='anonymous';v.preload='auto';
+   await new Promise(r=>{v.onloadedmetadata=r;v.load()});
+   const stream=v.captureStream();const ac=ctx.createMediaStreamSource(stream);const dest=ctx.createMediaStreamDestination();ac.connect(dest);
+   const rec=new MediaRecorder(dest.stream,{mimeType:'audio/webm'});const chunks=[];rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+   rec.start();v.play();const total=v.duration;let last=0;
+   await new Promise(resolve=>{v.ontimeupdate=()=>{const p=Math.min(95,v.currentTime/total*95);$('#bar').style.width=p+'%';if(v.currentTime>=total-0.05){v.pause();rec.stop();resolve()}}});
+   await new Promise(r=>rec.onstop=r);
+   // Decode recorded audio and encode to MP3 with lamejs.
+   const audioBlob=new Blob(chunks,{type:'audio/webm'});const buf=await audioBlob.arrayBuffer();const decoded=await ctx.decodeAudioData(buf);
+   const samples=decoded.getChannelData(0);const enc=new lamejs.Mp3Encoder(1,decoded.sampleRate,128), block=1152, mp3=[];
+   for(let i=0;i<samples.length;i+=block){const end=Math.min(i+block,samples.length), pcm=new Int16Array(end-i);for(let j=i;j<end;j++)pcm[j-i]=Math.max(-1,Math.min(1,samples[j]))*32767;const b=enc.encodeBuffer(pcm);if(b.length)mp3.push(new Int8Array(b));$('#bar').style.width=(95+i/samples.length*5)+'%'}
+   const end=enc.flush();if(end.length)mp3.push(new Int8Array(end));const out=new Blob(mp3,{type:'audio/mpeg'});const url=URL.createObjectURL(out);
+   $('#bar').style.width='100%';$('#status').textContent='변환 완료!';$('#download').disabled=false;$('#download').onclick=()=>{const a=document.createElement('a');a.href=url;a.download=f.name.replace(/\.[^.]+$/,'')+'.mp3';a.click();toast('MP3 저장을 시작했어요.')};
+  }catch(e){console.error(e);$('#status').textContent='이 브라우저에서 변환에 실패했어요. 다른 동영상으로 다시 시도해주세요.';$('#convert').disabled=false}
+ };
+}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.append(s)})}
+
+$('#brandBtn').onclick=()=>{show('#homeView');renderHome()};$('#addAlbumFab').onclick=()=>albumForm();$('#addTrackBtn').onclick=trackForm;
+$('#backHome').onclick=()=>{show('#homeView');renderHome()};$('#albumMore').onclick=()=>currentAlbum&&albumMenu(currentAlbum.id);
+$('#modalBackdrop').onclick=closeModal;$('#themeBtn').onclick=()=>document.documentElement.classList.toggle('force-dark');
+
+(async()=>{await openDB();albums=await getAll();renderHome();setTimeout(()=>$('#splash').classList.add('hide'),1750)})();
