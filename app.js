@@ -104,3 +104,78 @@ $("#queueBtn").onclick=queueOpen;$("#closeQueue").onclick=()=>$("#queue").hidden
 $("#searchBtn").onclick=()=>{let q=prompt("앨범 또는 곡 검색");if(q===null)return;let n=albums.filter(a=>a.name.includes(q)||a.artist?.includes(q)||a.tracks.some(t=>t.name.includes(q))).length;toast(n?`${n}개의 앨범에서 찾았어요.`:"검색 결과가 없어요.")};
 load();render();if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js?v=33").catch(()=>{});setTimeout(()=>{$("#splash").style.opacity=0;setTimeout(()=>$("#splash")?.remove(),600)},1450);
 })();
+
+/* 1:1 album-cover cropper */
+let croppedCoverFile=null;
+document.addEventListener("change",e=>{
+  const input=e.target;
+  if(input && input.id==="coverInput" && input.files && input.files[0]){
+    openSquareCropper(input.files[0],input);
+  }
+});
+
+function openSquareCropper(file,input){
+  const url=URL.createObjectURL(file);
+  modal(`<div class="modal-head"><h2>앨범 사진 자르기</h2><button class="icon" id="cropClose">×</button></div>
+  <div class="crop-help">사진을 <b>1:1 정사각형</b>으로 맞춰 주세요. 사진을 드래그해서 위치를 조절하고 확대/축소할 수 있어요.</div>
+  <div class="crop-stage" id="cropStage"><img id="cropImg" src="${url}" draggable="false"></div>
+  <div class="crop-controls">
+    <button class="glass-btn" id="cropMinus">−</button>
+    <input id="cropZoom" type="range" min="1" max="3" step=".01" value="1">
+    <button class="glass-btn" id="cropPlus">＋</button>
+  </div>
+  <div class="actions"><button class="glass-btn" id="cropCancel">취소</button><button class="pink-btn" id="cropDone">1:1 적용</button></div>`);
+
+  const img=$("#cropImg"), stage=$("#cropStage"), zoom=$("#cropZoom");
+  let scale=1,x=0,y=0,startX=0,startY=0,dragging=false;
+
+  img.onload=()=>{
+    const iw=img.naturalWidth,ih=img.naturalHeight;
+    scale=Math.max(1,Math.min(3,Math.max(1,Math.max(280/iw,280/ih))));
+    zoom.value=Math.max(1,Math.min(3,scale));
+    update();
+  };
+  function update(){
+    const side=stage.clientWidth;
+    const iw=img.naturalWidth,ih=img.naturalHeight;
+    const base=Math.max(side/iw,side/ih);
+    const sc=base*scale;
+    const w=iw*sc,h=ih*sc;
+    const maxX=Math.max(0,(w-side)/2),maxY=Math.max(0,(h-side)/2);
+    x=Math.max(-maxX,Math.min(maxX,x));y=Math.max(-maxY,Math.min(maxY,y));
+    img.style.width=w+"px";img.style.height=h+"px";
+    img.style.left=(side-w)/2+x+"px";img.style.top=(side-h)/2+y+"px";
+  }
+  zoom.oninput=()=>{scale=+zoom.value;update()};
+  $("#cropMinus").onclick=()=>{scale=Math.max(1,scale-.1);zoom.value=scale;update()};
+  $("#cropPlus").onclick=()=>{scale=Math.min(3,scale+.1);zoom.value=scale;update()};
+  stage.onpointerdown=e=>{dragging=true;stage.setPointerCapture(e.pointerId);startX=e.clientX-x;startY=e.clientY-y};
+  stage.onpointermove=e=>{if(!dragging)return;x=e.clientX-startX;y=e.clientY-startY;update()};
+  stage.onpointerup=()=>dragging=false;
+  stage.onpointercancel=()=>dragging=false;
+
+  const close=()=>{URL.revokeObjectURL(url);closeModal()};
+  $("#cropClose").onclick=close;$("#cropCancel").onclick=close;
+  $("#cropDone").onclick=async()=>{
+    const side=stage.clientWidth||320,canvas=document.createElement("canvas");
+    canvas.width=1024;canvas.height=1024;
+    const ctx=canvas.getContext("2d");
+    const iw=img.naturalWidth,ih=img.naturalHeight;
+    const base=Math.max(side/iw,side/ih),sc=base*scale;
+    const drawW=iw*sc,drawH=ih*sc;
+    const left=(side-drawW)/2+x,top=(side-drawH)/2+y;
+    ctx.drawImage(img,left*(1024/side),top*(1024/side),drawW*(1024/side),drawH*(1024/side));
+    canvas.toBlob(blob=>{
+      if(!blob){toast("사진을 자를 수 없어요.");return}
+      const cropped=new File([blob],"album-cover.jpg",{type:"image/jpeg"});
+      const dt=new DataTransfer();dt.items.add(cropped);
+      input.files=dt.files;
+      croppedCoverFile=cropped;
+      // Update the preview image if the creation sheet has one.
+      const preview=document.querySelector("#coverPreview");
+      if(preview)preview.src=URL.createObjectURL(cropped);
+      closeModal();
+      toast("1:1 앨범 사진 적용 완료");
+    },"image/jpeg",.92);
+  };
+}
