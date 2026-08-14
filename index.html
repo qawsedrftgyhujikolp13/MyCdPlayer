@@ -64,13 +64,6 @@
   </div>
 
   <audio id="player" preload="metadata"></audio>
-  <script>
-    // Splash fallback: hide it even if another app script takes a moment to load.
-    window.setTimeout(function(){
-      var splash = document.getElementById('splash');
-      if (splash) splash.classList.add('hide');
-    }, 1700);
-  </script>
   <script src="app.js"></script>
 </body>
 </html>
