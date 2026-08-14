@@ -111,7 +111,7 @@ async function videoToMp3(){
  <div class="file-box"><label class="file-label" for="videoFile">🎬 동영상 파일 선택</label><input id="videoFile" type="file" accept="video/*"><p id="videoName" class="muted">선택된 파일 없음</p></div>
  <button class="primary" id="convert" disabled>MP3으로 변환</button><div class="progress"><i id="bar"></i></div><p class="convert-status" id="status">파일을 선택하면 변환할 수 있어요.</p><button class="secondary" id="download" disabled style="width:100%;margin-top:8px">저장</button>`);
  $('#close').onclick=closeModal;
- $('#videoFile').onchange=e=>{const f=e.target.files[0];if(f){$('#videoName').textContent=f.name;$('#convert').disabled=false;$('#status').textContent='변환 준비 완료'}}};
+  $('#videoFile').onchange=e=>{const f=e.target.files[0];if(f){$('#videoName').textContent=f.name;$('#convert').disabled=false;$('#status').textContent='변환 준비 완료'}};
  $('#convert').onclick=async()=>{
   const f=$('#videoFile').files[0];if(!f)return;$('#convert').disabled=true;$('#status').textContent='오디오 추출 중…';
   try{
