@@ -211,3 +211,67 @@ body:after{
 .tool-orb.trim{font-size:27px}
 .tool-copy{min-width:0}.tool-copy small{display:block;color:var(--pink);font-size:9px;font-weight:950;letter-spacing:.15em}.tool-copy b{display:block;margin:4px 0 2px;font-size:17px}.tool-copy em{display:block;font-style:normal;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:700px){.tools-grid{grid-template-columns:1fr}.tools-title{align-items:start;flex-direction:column}.tools-caption{margin-top:3px}}
+
+/* MCP FINAL — modal and mini-player corrections */
+#modal{position:fixed;inset:0;z-index:1000;pointer-events:none}
+#modal:empty{display:none}
+#modal .modal-bg{
+  position:fixed;inset:0;width:100vw;height:100dvh;
+  display:flex;align-items:center;justify-content:center;
+  padding:calc(14px + var(--safeT)) 14px calc(14px + var(--safeB));
+  background:rgba(5,3,7,.38);
+  backdrop-filter:blur(24px) saturate(145%);
+  -webkit-backdrop-filter:blur(24px) saturate(145%);
+  pointer-events:auto;
+  overflow:hidden;
+  animation:modalFade .22s ease both;
+}
+#modal .modal-card{
+  position:relative;width:min(620px,100%);max-height:min(88dvh,760px);
+  overflow:auto;overscroll-behavior:contain;
+  padding:26px 20px calc(22px + var(--safeB));
+  border-radius:34px;
+  color:var(--ink);
+  background:linear-gradient(145deg,rgba(255,255,255,.27),rgba(255,255,255,.10));
+  border:1px solid var(--stroke);
+  box-shadow:0 35px 120px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.82);
+  backdrop-filter:blur(38px) saturate(190%);
+  -webkit-backdrop-filter:blur(38px) saturate(190%);
+  animation:modalUp .38s cubic-bezier(.2,.8,.2,1) both;
+}
+#modal .modal-card:before{
+  content:"";position:absolute;left:12%;top:-90px;width:76%;height:140px;
+  border-radius:50%;background:rgba(255,255,255,.12);filter:blur(30px);pointer-events:none;
+}
+#modal .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+#modal .modal-head h2{margin:0;font-size:28px;letter-spacing:-.06em}
+#modal .modal-head .icon{flex:none}
+#modal .field{margin:13px 0}
+#modal .field label{display:block;margin:0 0 7px;color:var(--muted);font-size:12px;font-weight:800}
+#modal .field input:not([type=file]){
+  width:100%;height:52px;padding:0 15px;border-radius:17px;
+  border:1px solid rgba(255,255,255,.35);outline:none;
+  background:rgba(255,255,255,.10);color:var(--ink);
+  box-shadow:inset 0 1px rgba(255,255,255,.42);
+}
+#modal .field input:not([type=file]):focus{border-color:rgba(255,63,137,.65);box-shadow:0 0 0 4px rgba(255,63,137,.10),inset 0 1px rgba(255,255,255,.55)}
+#modal .photo{min-height:155px;display:grid;place-items:center;overflow:hidden}
+#modal .photo img{width:100%;height:100%;max-height:220px;object-fit:cover;border-radius:17px}
+#modal .actions{display:flex;gap:9px;margin-top:20px}
+#modal .actions>*{flex:1}
+body.modal-open{overflow:hidden!important}
+#mini[hidden]{display:none!important}
+@media(max-width:700px){
+  #modal .modal-bg{align-items:flex-end;padding:0}
+  #modal .modal-card{
+    width:100%;max-height:88dvh;
+    border-radius:32px 32px 0 0;
+    padding:24px 18px calc(22px + var(--safeB));
+  }
+  #modal .modal-card:after{
+    content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);
+    width:42px;height:5px;border-radius:99px;background:rgba(130,110,120,.28);
+  }
+}
+@keyframes modalFade{from{opacity:0}to{opacity:1}}
+@keyframes modalUp{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:none}}
