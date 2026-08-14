@@ -1,4 +1,4 @@
-const CACHE="mcp-final-01";
+const CACHE="mcp-final-nav-02";
 const CORE=["./","./index.html","./style.css","./app.js","./manifest.json"];
 
 self.addEventListener("install",event=>{

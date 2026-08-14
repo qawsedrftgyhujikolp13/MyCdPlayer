@@ -840,3 +840,35 @@ button:focus-visible{
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}
 }
+
+/* Persistent mini music bar */
+#mini{
+  position:fixed!important;
+  left:50%!important;
+  bottom:calc(12px + var(--safeB))!important;
+  transform:translateX(-50%)!important;
+  width:min(720px,calc(100% - 24px))!important;
+  z-index:800!important;
+  animation:miniDockIn .42s cubic-bezier(.16,1,.3,1) both!important;
+}
+@keyframes miniDockIn{
+  from{opacity:0;transform:translate(-50%,24px) scale(.96);filter:blur(6px)}
+  to{opacity:1;transform:translate(-50%,0) scale(1);filter:blur(0)}
+}
+#mini .mini-shape{display:grid!important;place-items:center!important}
+#mini .mini-shape svg{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* Favorites */
+.player-heart{
+  border:0;background:transparent;color:rgba(255,255,255,.38);
+  font-size:27px;line-height:1;padding:0;margin:0 auto 10px;
+  cursor:pointer;transform:scale(1);filter:drop-shadow(0 7px 18px rgba(0,0,0,.18));
+}
+.player-heart:hover{transform:scale(1.12)}
+.player-heart.active{color:#ff3b87;text-shadow:0 0 24px rgba(255,59,135,.42);animation:heartPop .38s cubic-bezier(.16,1,.3,1)}
+.mini-heart{border:0!important;background:transparent!important;color:rgba(255,255,255,.45);font-size:18px!important;padding:0 4px!important}
+.mini-heart.active{color:#ff3b87;text-shadow:0 0 14px rgba(255,59,135,.45);animation:heartPop .38s cubic-bezier(.16,1,.3,1)}
+@keyframes heartPop{0%{transform:scale(.72)}55%{transform:scale(1.28)}100%{transform:scale(1)}}
+.favorite-card .album-cover{box-shadow:0 0 0 1px rgba(255,59,135,.12),0 18px 40px rgba(255,59,135,.10)!important}
+.filters{display:flex!important;gap:8px!important}
+[data-filter="fav"].active{color:#ff3b87!important;border-color:rgba(255,59,135,.38)!important;background:rgba(255,59,135,.08)!important}

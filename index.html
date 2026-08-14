@@ -28,7 +28,7 @@
     <span class="eyebrow">YOUR DIGITAL MUSIC ROOM</span>
     <h1>음악을<br><em>CD로.</em></h1>
     <p>앨범을 모으고, 원하는 곡만 골라<br>나만의 플레이어로 재생하세요.</p>
-    <div class="hero-actions"><button class="pink" id="heroAdd">＋ 새 앨범</button><button class="glass-btn" id="recentBtn">최근 재생</button></div>
+    <div class="hero-actions"><button class="pink" id="heroAdd">＋ 새 앨범</button><button class="glass-btn" id="favHeroBtn">♥ 찜한 노래</button></div>
   </div>
   <div class="hero-vinyl"><div class="shine"></div><div class="hero-label">MCP</div><div class="hero-hole"></div></div>
 </section>
@@ -36,7 +36,7 @@
 
 <section class="library-head">
   <div><span class="eyebrow">LIBRARY</span><h2 id="albumCount">0 ALBUMS</h2></div>
-  <div class="filters"><button class="glass-btn active" data-filter="albums">앨범</button><button class="glass-btn" data-filter="recent">최근</button><button class="glass-btn" data-filter="fav">♥</button></div>
+  <div class="filters"><button class="glass-btn active" data-filter="albums">앨범</button><button class="glass-btn" data-filter="fav">♥ 찜</button></div>
 </section>
 
 <section id="empty" class="empty glass">
@@ -70,7 +70,7 @@
 
 <div id="mini" class="mini glass" hidden>
   <button id="miniMain" class="mini-main"><span id="miniDisc" class="mini-disc">M</span><span class="mini-copy"><b id="miniTitle">—</b><small id="miniArtist">—</small></span></button>
-  <span id="miniRemain">0:00</span>
+  <button id="miniFav" class="mini-ctrl mini-heart" aria-label="찜">♥</button><span id="miniRemain">0:00</span>
 <button id="miniPrev" class="mini-ctrl mini-shape" aria-label="이전 곡"><svg viewBox="0 0 24 24"><path d="M7 5v14"/><path d="M19 6 9 12l10 6z"/></svg></button>
 <button id="miniPlay" class="mini-ctrl mini-shape" aria-label="재생"><svg class="mini-play-icon" viewBox="0 0 24 24"><path d="M8 5.5 19 12 8 18.5z"/></svg><svg class="mini-pause-icon" viewBox="0 0 24 24"><path d="M8 6v12M16 6v12"/></svg></button>
 <button id="miniNext" class="mini-ctrl mini-shape" aria-label="다음 곡"><svg viewBox="0 0 24 24"><path d="M17 5v14"/><path d="m5 6 10 6-10 6z"/></svg></button>
@@ -84,7 +84,7 @@
       <div class="back-disc" id="backDisc"></div>
       <div class="front-cover" id="frontCover"></div>
     </div>
-    <div class="p-meta"><h1 id="pTitle">—</h1><p id="pArtist">—</p></div>
+    <div class="p-meta"><button id="pFav" class="player-heart" aria-label="찜">♥</button><h1 id="pTitle">—</h1><p id="pArtist">—</p></div>
     <div class="seek"><input id="seek" type="range" min="0" max="100" value="0"><div><span id="pCur">0:00</span><span id="pRemain">-0:00</span></div></div>
     <div class="transport">
       <button id="pShuffle" class="round shape-btn" aria-label="랜덤 재생"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3.2c3.5 0 4.1 5.8 8.2 5.8H20"/><path d="M17 4l3 3-3 3"/><path d="M4 17h3.2c1.9 0 3-1.2 4-2.6"/><path d="M17 14l3 3-3 3"/></svg></button>
