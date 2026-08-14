@@ -101,7 +101,7 @@ function albumDetail(a){
 }
 function trackForm(a){let file=null,dur=0;modal(`<div class="modal-head"><h2>노래 추가</h2><button class="icon" id="mx">×</button></div><div class="field"><label>노래 제목 *</label><input id="tn" placeholder="노래 제목을 입력하세요"></div><div class="field"><label>음원</label><button class="glass-btn" id="pickSong">MP3 / 음원 불러오기</button><span id="fn" class="meta"></span></div><div class="field"><label>길이(초)</label><input id="td" type="number" min="0" step="1" placeholder="자동 인식"></div><div class="actions"><button class="glass-btn" id="mc">취소</button><button class="pink" id="saveT">SAVE</button></div>`);
 $("#mx").onclick=closeModal;$("#mc").onclick=closeModal;$("#pickSong").onclick=()=>$("#songInput").click();$("#songInput").onchange=()=>{file=$("#songInput").files[0];if(!file)return;$("#fn").textContent=" · "+file.name;let u=URL.createObjectURL(file),x=new Audio;x.onloadedmetadata=()=>{$("#td").value=Math.round(x.duration);dur=x.duration;URL.revokeObjectURL(u)};x.src=u};$("#saveT").onclick=async()=>{let name=$("#tn").value.trim();if(!name)return toast("노래 제목을 입력해 주세요.");let d=+$("#td").value||dur||0,key=file?uid():"";if(file)await putFile(key,file);a.tracks.push({id:uid(),name,duration:d,fileKey:key,lyrics:[]});save();albumDetail(a);toast("노래를 추가했어요.")}}
-function trackActions(a,i){let t=a.tracks[i];modal(`<div class="modal-head"><h2>${esc(t.name)}</h2><button class="icon" id="mx">×</button></div><p class="meta">${fmt(t.duration)} · ${esc(a.artist||"")}</p><div class="actions"><button class="glass-btn" id="lyricsEdit">가사 편집</button><button class="glass-btn" id="delT">삭제</button><button class="pink" id="playT">재생</button></div>`);$("#mx").onclick=closeModal;$("#playT").onclick=()=>start(a,[i]);$("#delT").onclick=async()=>{await delFile(t.fileKey);a.tracks.splice(i,1);save();albumDetail(a);toast("노래를 삭제했어요.")};$("#lyricsEdit").onclick=()=>lyricsEditor(t)}
+function trackActions(a,i){let t=a.tracks[i];modal(`<div class="modal-head"><h2>${esc(t.name)}</h2><button class="icon" id="mx">×</button></div><p class="meta">${fmt(t.duration)} · ${esc(a.artist||"")}</p><div class="actions"><button class="glass-btn" id="lyricsEdit">가사 편집</button><button class="glass-btn" id="delT">삭제</button><button class="pink" id="playT">재생</button></div>`);$("#mx").onclick=closeModal;$("#playT").onclick=()=>start(a,a.tracks.map((_,idx)=>idx),i);$("#delT").onclick=async()=>{await delFile(t.fileKey);a.tracks.splice(i,1);save();albumDetail(a);toast("노래를 삭제했어요.")};$("#lyricsEdit").onclick=()=>lyricsEditor(t)}
 function lyricsEditor(t){
   let rows=(t.lyrics||[]).map(x=>({
     start:Number(x.start)||0,
@@ -112,9 +112,9 @@ function lyricsEditor(t){
 
   const readRows=()=>{
     rows=$$("#le .lyric-row").map(row=>({
-      start:Math.max(0,Number($(".ls",row)?.value)||0),
-      end:Math.max(0,Number($(".le",row)?.value)||0),
-      text:$(".lt",row)?.value ?? ""
+      start:Math.max(0,Number(row.querySelector(".ls")?.value)||0),
+      end:Math.max(0,Number(row.querySelector(".le")?.value)||0),
+      text:row.querySelector(".lt")?.value ?? ""
     }));
   };
   const attr=v=>esc(String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"));
