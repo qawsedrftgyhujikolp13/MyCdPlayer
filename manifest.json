@@ -1,1 +1,1 @@
-{"name":"MCP — My CD Player","short_name":"MCP","start_url":"./","display":"standalone","orientation":"any","background_color":"#fff8fb","theme_color":"#ff3e86","icons":[{"src":"logo.png","sizes":"1024x1024","type":"image/png","purpose":"any maskable"}]}
+{"name":"MCP — My CD Player","short_name":"MCP","start_url":"./","display":"standalone","orientation":"any","background_color":"#fff8fb","theme_color":"#ff3e86"}
