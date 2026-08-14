@@ -1,1 +1,11 @@
-{"name":"MCP — My Cd Player","short_name":"MCP","start_url":"./","display":"standalone","background_color":"#fffafb","theme_color":"#ff6fa9","orientation":"any","icons":[]}
+{
+  "name":"MCP — My CD Player",
+  "short_name":"MCP",
+  "description":"나만의 CD 앨범과 음악을 정리하는 플레이어",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#fff8fb",
+  "theme_color":"#ff5fa2",
+  "orientation":"any",
+  "icons":[]
+}

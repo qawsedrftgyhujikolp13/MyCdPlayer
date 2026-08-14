@@ -1,9 +1,76 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#ff6fa9"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="MCP"><link rel="manifest" href="manifest.json"><link rel="stylesheet" href="style.css"><title>MCP — My Cd Player</title></head><body>
-<div id="splash"><b>MCP</b></div><div id="app" class="hidden"><header><div><small>MY CD PLAYER</small><h1>MCP</h1></div><button id="homeBtn" class="icon hidden">⌂</button></header>
-<main id="home"><section class="hero"><div><small>YOUR DIGITAL COLLECTION</small><h2>나만의 CD 앨범</h2><p>앨범과 노래를 넣고 원하는 곡만 골라 재생해보세요.</p></div><div class="heroDisc">♪</div></section><section id="empty" class="empty"><div class="heroDisc">♪</div><h3>앨범이 없네요</h3><p>앨범을 만들어 보아요!</p></section><section id="albums"></section><button id="addAlbum" class="fab">+</button></main>
-<main id="album" class="hidden"><div class="row"><button id="back" class="icon">‹</button><button id="menu" class="icon">•••</button></div><section class="albumHead"><div id="cover" class="cover big">MCP</div><div><small id="artist"></small><h2 id="title"></h2><small id="date"></small></div></section><div class="row songHead"><div><small>TRACKS</small><h3>노래 목록</h3></div><button id="addSong" class="pink">＋ 노래 추가</button></div><section id="songs"></section><div id="selectBar" class="selectBar hidden"><b id="selectCount">0곡</b><button id="playSelected" class="pink">재생하기</button></div></main></div>
-<div id="albumModal" class="modal hidden"><div class="sheet"><button class="close" data-close="albumModal">×</button><small>NEW COLLECTION</small><h2>앨범 만들기</h2><form id="albumForm"><input id="albumId" type="hidden"><label>앨범명 *<input id="albumName" required placeholder="앨범명을 입력하세요."></label><label>가수명<input id="albumArtist" placeholder="가수명을 입력하세요."></label><label>발매일<input id="albumDate" type="date"></label><label class="photo">📸 사진을 넣어주세요<input id="albumImage" type="file" accept="image/*"></label><button class="save">저장 / SAVE</button></form></div></div>
-<div id="songModal" class="modal hidden"><div class="sheet"><button class="close" data-close="songModal">×</button><small>ADD TRACK</small><h2>노래 추가</h2><form id="songForm"><label>노래 제목<input id="songTitle" required placeholder="노래 제목을 입력하세요."></label><label>가수명<input id="songArtist" placeholder="앨범 가수명 사용"></label><label class="file"><span id="fileName">MP3 파일을 선택하세요</span><input id="songFile" type="file" accept="audio/*"><b>MP3 불러오기</b></label><div id="lengthBox" class="length hidden"><div class="row"><span>재생 길이 편집</span><b id="lengthText">0:00</b></div><input id="length" type="range" min="1" max="100" value="100"></div><button class="save">저장 / SAVE</button></form></div></div>
-<div id="menuModal" class="modal hidden"><div class="action"><button id="edit">앨범 수정</button><button id="del">앨범 삭제</button><button data-close="menuModal">취소</button></div></div>
-<div id="mini" class="mini hidden"><button id="miniOpen"><i id="miniDisc">♪</i><span><b id="miniTitle">—</b><small id="miniArtist">—</small></span><em id="miniTime">0:00 남음</em></button><button id="miniPrev">‹</button><button id="miniToggle">Ⅱ</button><button id="miniNext">›</button></div>
-<div id="player" class="player hidden"><button id="playerClose" class="playerClose">×</button><div class="playerInner"><small>NOW PLAYING</small><h2 id="pTitle">—</h2><p id="pArtist">—</p><div id="cd" class="cd"><span>MCP</span></div><div class="progress"><span id="cur">0:00</span><input id="progress" type="range" min="0" max="100" value="0"><span id="dur">0:00</span></div><div class="controls"><button id="prev">‹</button><button id="toggle" class="main">Ⅱ</button><button id="next">›</button></div><div class="modes"><button id="repeat">🔃 앨범 반복</button><button id="shuffle">🎲 랜덤 재생</button></div></div></div><audio id="audio" preload="metadata"></audio><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#ff5fa2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MCP">
+  <title>MCP — My CD Player</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="splash" class="splash"><div class="splash-logo">MCP</div></div>
+
+  <div id="app" class="app-shell">
+    <header class="topbar glass">
+      <button id="brandBtn" class="brand" aria-label="홈">
+        <span class="brand-mark">M</span>
+        <span><b>MCP</b><small>My CD Player</small></span>
+      </button>
+      <div class="top-actions">
+        <button id="themeBtn" class="icon-btn" title="테마">◐</button>
+      </div>
+    </header>
+
+    <main id="homeView" class="view active">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">MY COLLECTION</p>
+          <h1>나의 앨범</h1>
+          <p class="sub">좋아하는 음악을 CD처럼 정리해보세요.</p>
+        </div>
+        <div class="album-count"><b id="albumCount">0</b><span>ALBUMS</span></div>
+      </section>
+      <section id="albumGrid" class="album-list"></section>
+      <button id="addAlbumFab" class="fab" aria-label="앨범 추가">＋</button>
+    </main>
+
+    <main id="albumView" class="view">
+      <div class="detail-head">
+        <button id="backHome" class="back-btn">‹ <span>앨범</span></button>
+        <button id="albumMore" class="icon-btn">•••</button>
+      </div>
+      <section class="album-hero glass">
+        <div id="detailCover" class="detail-cover"></div>
+        <div class="detail-info">
+          <p id="detailArtist" class="muted">아티스트</p>
+          <h1 id="detailTitle">앨범</h1>
+          <p id="detailDate" class="muted"></p>
+        </div>
+      </section>
+      <section class="track-section">
+        <div class="section-title"><span>TRACKS</span><button id="addTrackBtn" class="round-add">＋</button></div>
+        <div id="trackList"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modalLayer" class="modal-layer hidden">
+    <div id="modalBackdrop" class="modal-backdrop"></div>
+    <section id="modal" class="modal glass" role="dialog" aria-modal="true"></section>
+  </div>
+
+  <audio id="player" preload="metadata"></audio>
+  <script>
+    // Splash fallback: hide it even if another app script takes a moment to load.
+    window.setTimeout(function(){
+      var splash = document.getElementById('splash');
+      if (splash) splash.classList.add('hide');
+    }, 1700);
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
