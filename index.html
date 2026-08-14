@@ -84,7 +84,13 @@
     </div>
     <div class="p-meta"><span id="pAlbum">MCP</span><h1 id="pTitle">—</h1><p id="pArtist">—</p></div>
     <div class="seek"><input id="seek" type="range" min="0" max="100" value="0"><div><span id="pCur">0:00</span><span id="pRemain">-0:00</span></div></div>
-    <div class="transport"><button id="pShuffle" class="round">⌘</button><button id="pPrev" class="round">‹</button><button id="pToggle" class="play">Ⅱ</button><button id="pNext" class="round">›</button><button id="pRepeat" class="round">↻</button></div>
+    <div class="transport">
+      <button id="pShuffle" class="round shape-btn" aria-label="랜덤 재생"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3.2c3.5 0 4.1 5.8 8.2 5.8H20"/><path d="M17 4l3 3-3 3"/><path d="M4 17h3.2c1.9 0 3-1.2 4-2.6"/><path d="M17 14l3 3-3 3"/></svg></button>
+      <button id="pPrev" class="round shape-btn" aria-label="이전 곡"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14"/><path d="M19 6 9 12l10 6z"/></svg></button>
+      <button id="pToggle" class="play shape-btn" aria-label="재생"><svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5.5 19 12 8 18.5z"/></svg><svg class="icon-pause" viewBox="0 0 24 24"><path d="M8 6v12M16 6v12"/></svg></button>
+      <button id="pNext" class="round shape-btn" aria-label="다음 곡"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 5v14"/><path d="m5 6 10 6-10 6z"/></svg></button>
+      <button id="pRepeat" class="round shape-btn" aria-label="앨범 반복"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h10l-2.5-2.5"/><path d="M18 17H8l2.5 2.5"/><path d="M18 7a4 4 0 0 1 0 6"/><path d="M6 17a4 4 0 0 1 0-6"/></svg></button>
+    </div>
     <div class="mode-row"><button id="lyricsBtn" class="glass-btn">♪ 가사</button><button id="queueBtn" class="glass-btn">☷ 재생목록</button><button id="convertBtn" class="glass-btn">MP3 변환</button></div>
     <section class="lyrics glass" id="lyrics">
       <div class="lyrics-head"><span>LYRICS</span><button id="editLyrics" class="tiny">편집</button></div>
