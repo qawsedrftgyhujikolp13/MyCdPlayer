@@ -446,3 +446,52 @@ body.modal-open{overflow:hidden!important}
     animation:none!important;filter:none!important;
   }
 }
+
+/* Final album ordering motion — actual rendered class is .album-card */
+.album-card{
+  animation:albumCardInFinal .58s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes albumCardInFinal{
+  from{opacity:0;transform:translateY(20px) scale(.975);filter:blur(6px)}
+  to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+}
+
+/* Next-arrow slide transition: the current arrow blurs/fades right while the
+   second arrow, waiting just outside on the left, fills its exact position. */
+.next-arrow{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+}
+.next-arrow .next-arrow-out,
+.next-arrow .next-arrow-in{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+}
+.next-arrow .next-arrow-in{
+  transform:translateX(-125%);
+  opacity:0;
+  filter:blur(7px);
+}
+.next-arrow.arrow-shift .next-arrow-out{
+  animation:arrowExitRight .28s cubic-bezier(.55,.08,.68,.53) both;
+}
+.next-arrow.arrow-shift .next-arrow-in{
+  animation:arrowEnterFromLeft .34s cubic-bezier(.16,1,.3,1) .055s both;
+}
+@keyframes arrowExitRight{
+  0%{transform:translateX(0) scale(1);opacity:1;filter:blur(0)}
+  55%{transform:translateX(62%) scale(.94);opacity:.45;filter:blur(4px)}
+  100%{transform:translateX(125%) scale(.86);opacity:0;filter:blur(9px)}
+}
+@keyframes arrowEnterFromLeft{
+  0%{transform:translateX(-125%) scale(.86);opacity:0;filter:blur(9px)}
+  55%{transform:translateX(-18%) scale(.98);opacity:.72;filter:blur(3px)}
+  100%{transform:translateX(0) scale(1);opacity:1;filter:blur(0)}
+}
+@media(prefers-reduced-motion:reduce){
+  .next-arrow.arrow-shift .next-arrow-out,
+  .next-arrow.arrow-shift .next-arrow-in{animation:none}
+}
